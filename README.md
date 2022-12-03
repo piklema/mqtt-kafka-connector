@@ -1,6 +1,8 @@
 # MQTT Kafka connector
 
 ### How to run
+Rename `.env.example` to `.env` and changes values
+
 ```shell
-MQTT_BROKER=
+python connector/main.py
 ```
