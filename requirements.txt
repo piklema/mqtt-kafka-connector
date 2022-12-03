@@ -1,0 +1,2 @@
+aiokafka==0.8.0
+asyncio-mqtt==0.15.0
