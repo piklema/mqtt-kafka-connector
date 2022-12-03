@@ -1,0 +1,19 @@
+version: '2.1'
+services:
+
+  django:
+    build:
+      dockerfile: ./Dockerfile
+      context: .
+    environment:
+      - 'PS1=$$(whoami)@$$(hostname):$$(pwd) $$ '
+    env_file:
+      - .env.docker
+    volumes:
+      - ./connector:/app
+    networks:
+      - data-collector_default
+
+networks:
+  data-collector_default:
+    external: true
