@@ -33,7 +33,7 @@ jobs:
       uses: mr-smithers-excellent/docker-build-push@v3
       with:
         image: piklema/mqtt-kafka-connector
-        tag: ${{ env.RELEASE_VERSION }}, latest
+        tag: ${{ env.RELEASE_VERSION }}
         registry: docker.io
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
