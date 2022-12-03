@@ -16,13 +16,20 @@ from conf import (
     MQTT_USER,
 )
 from utils import prepare_topic_mqtt_to_kafka
+from kafka.errors import KafkaConnectionError
 
 logger = logging.getLogger(__name__)
 
 
 async def send_to_kafka(topic: str, value: bytes):
-    producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
-    await producer.start()
+
+    try:
+        producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
+        await producer.start()
+    except KafkaConnectionError as e:
+        logger.error(f'Kafka sending error {e}')
+        return
+
     try:
         await producer.send_and_wait(topic, value)
         logger.info(f'Send to kafka {topic=}, {value=}')
