@@ -1,10 +1,11 @@
+from unittest import mock
+from unittest.mock import AsyncMock
+
 import pytest
+from aiokafka import errors
+from asyncio_mqtt import Message, Topic
 
 from connector.main import mqtt_message_handler, send_to_kafka
-from asyncio_mqtt import Message, Topic
-from unittest import mock
-from aiokafka import errors
-from unittest.mock import AsyncMock
 
 pytestmark = pytest.mark.asyncio
 
