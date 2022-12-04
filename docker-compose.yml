@@ -10,7 +10,7 @@ services:
     env_file:
       - .env.docker
     volumes:
-      - ./connector:/app
+      - .:/app
     networks:
       - data-collector_default
 
