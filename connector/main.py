@@ -23,18 +23,15 @@ logger = logging.getLogger(__name__)
 
 
 async def send_to_kafka(topic: str, value: bytes) -> bool:
-
+    producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
     try:
-        producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
         await producer.start()
+        await producer.send(topic, value)
+        logger.info(f'Send to kafka {topic=}, {value=}')
+        return True
     except KafkaConnectionError as e:
         logger.error(f'Kafka sending error {e}')
         return False
-
-    try:
-        await producer.send_and_wait(topic, value)
-        logger.info(f'Send to kafka {topic=}, {value=}')
-        return True
     finally:
         await producer.stop()
 
@@ -45,19 +42,15 @@ async def mqtt_message_handler(message: Message) -> bool:
         f'Message received from {mqtt_topic.value=} '
         f'{message.payload=} {message.qos=}'
     )
-
-    if mqtt_topic.matches(MQTT_TOPIC_SOURCE_MATCH):
+    if kafka_topic := prepare_topic_mqtt_to_kafka(mqtt_topic.value):
         res = await send_to_kafka(
-            prepare_topic_mqtt_to_kafka(mqtt_topic.value),
+            kafka_topic,
             message.payload,
         )
+        return res
     else:
-        res = False
-        logger.warning(
-            f'Message {message.payload=} '
-            f'receive from wrong topic: {mqtt_topic.value=}'
-        )
-    return res
+        logger.warning(f'Error prepare kafka topic from {mqtt_topic.value=}')
+        return False
 
 
 async def run():
@@ -74,7 +67,7 @@ async def run():
             ) as client:
 
                 async with client.messages() as messages:
-                    await client.subscribe('#', qos=2)
+                    await client.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=2)
                     async for message in messages:
                         await mqtt_message_handler(message)
 
