@@ -1,10 +1,8 @@
 FROM python:3.11.0-alpine
 
-COPY connector /app
-COPY ./requirements.txt /app/requirements.txt
-
+COPY . /app
 WORKDIR /app
 
-RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN pip install -e .
 
-ENTRYPOINT ["python", "main.py"]
+ENTRYPOINT ["mqtt_kafka_connector"]

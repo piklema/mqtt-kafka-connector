@@ -1,7 +1,7 @@
 version: '2.1'
 services:
 
-  django:
+  mqtt-kafka-connector:
     build:
       dockerfile: ./Dockerfile
       context: .
@@ -10,7 +10,7 @@ services:
     env_file:
       - .env.docker
     volumes:
-      - ./connector:/app
+      - .:/app
     networks:
       - data-collector_default
 

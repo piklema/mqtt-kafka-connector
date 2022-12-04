@@ -1,0 +1,19 @@
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+fail_under = 87
+
+[tool.black]
+line-length = 79
+skip-string-normalization = true
+target-version = ['py310']
+
+[tool.isort]
+profile = "black"
+line_length = 79
+

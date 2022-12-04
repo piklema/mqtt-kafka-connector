@@ -1,61 +1,59 @@
 import asyncio
 import logging
+import sys
 
 import asyncio_mqtt as aiomqtt
 from aiokafka import AIOKafkaProducer
 from asyncio_mqtt import Message
+from kafka.errors import KafkaConnectionError
 
-from conf import (
+from connector.conf import (
     KAFKA_BOOTSTRAP_SERVERS,
-    MQTT_HOST,
-    MQTT_PORT,
     MQTT_CLIENT_ID,
+    MQTT_HOST,
     MQTT_PASSWORD,
+    MQTT_PORT,
     MQTT_RECONNECT_INTERVAL_SEC,
     MQTT_TOPIC_SOURCE_MATCH,
     MQTT_USER,
 )
-from utils import prepare_topic_mqtt_to_kafka
-from kafka.errors import KafkaConnectionError
+from connector.utils import prepare_topic_mqtt_to_kafka
 
 logger = logging.getLogger(__name__)
 
 
-async def send_to_kafka(topic: str, value: bytes):
-
+async def send_to_kafka(topic: str, value: bytes) -> bool:
+    producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
     try:
-        producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
         await producer.start()
+        await producer.send(topic, value)
+        logger.info(f'Send to kafka {topic=}, {value=}')
+        return True
     except KafkaConnectionError as e:
         logger.error(f'Kafka sending error {e}')
-        return
-
-    try:
-        await producer.send_and_wait(topic, value)
-        logger.info(f'Send to kafka {topic=}, {value=}')
+        return False
     finally:
         await producer.stop()
 
 
-async def handler(message: Message):
+async def mqtt_message_handler(message: Message) -> bool:
     mqtt_topic = message.topic
     logger.info(
         f'Message received from {mqtt_topic.value=} '
         f'{message.payload=} {message.qos=}'
     )
-    if mqtt_topic.matches(MQTT_TOPIC_SOURCE_MATCH):
-        await send_to_kafka(
-            prepare_topic_mqtt_to_kafka(mqtt_topic.value),
+    if kafka_topic := prepare_topic_mqtt_to_kafka(mqtt_topic.value):
+        res = await send_to_kafka(
+            kafka_topic,
             message.payload,
         )
+        return res
     else:
-        logger.warning(
-            f'Message {message.payload=} '
-            f'receive from wrong topic: {mqtt_topic.value=}'
-        )
+        logger.warning(f'Error prepare kafka topic from {mqtt_topic.value=}')
+        return False
 
 
-async def main():
+async def run():
     logger.info('MQTT Kafka connector is running')
     while True:
         try:
@@ -69,9 +67,9 @@ async def main():
             ) as client:
 
                 async with client.messages() as messages:
-                    await client.subscribe('#', qos=2)
+                    await client.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=2)
                     async for message in messages:
-                        await handler(message)
+                        await mqtt_message_handler(message)
 
         except aiomqtt.MqttError as error:
             logger.warning(
@@ -81,5 +79,9 @@ async def main():
             await asyncio.sleep(MQTT_RECONNECT_INTERVAL_SEC)
 
 
+def main():
+    asyncio.run(run())
+
+
 if __name__ == '__main__':
-    asyncio.run(main())
+    sys.exit(main())
