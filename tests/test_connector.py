@@ -34,11 +34,7 @@ async def test_mqtt_handler(send_to_kafka_mock):
 
     topic = Topic('customer/1/dev/1')
     msg = Message(
-        topic=topic,
-        payload=b'some_payload',
-        qos=2,
-        retain=False,
-        mid=0
+        topic=topic, payload=b'some_payload', qos=2, retain=False, mid=0
     )
 
     res = await mqtt_message_handler(msg)
