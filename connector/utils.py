@@ -1,13 +1,5 @@
 import re
-from typing import Optional
-
-
-def prepare_topic_mqtt_to_kafka(mqtt_topic: str) -> str:
-    try:
-        customer_id = mqtt_topic.split('/')[1]
-    except IndexError:
-        return ''
-    return f'customer_{customer_id}'
+from typing import Dict, Optional
 
 
 class Template:
@@ -24,7 +16,7 @@ class Template:
         """Заменить шаблоны вида {маска} на `wildcard`"""
         return re.sub(self.MASK_REGEXP, wildcard, self.src_tpl)
 
-    def to_dict(self, topic: str) -> Optional[dict[str, str]]:
+    def to_dict(self, topic: str) -> Optional[Dict[str, str]]:
         """Получить из шаблона словарь с значениями из строки"""
         regex_str = self.tpl_to_regex(self.src_tpl)
         matches = re.match(regex_str, topic)
