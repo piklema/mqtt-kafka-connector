@@ -5,7 +5,7 @@ Rename `.env.example` to `.env` and changes values
 
 ### Run unittest
 ```shell
-$ pip install -e .[develop]
+$ pip install -e ".[develop]"
 $ make test
 ```
 
