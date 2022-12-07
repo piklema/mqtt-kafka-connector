@@ -5,8 +5,8 @@ from aiokafka import errors
 from asyncio_mqtt import Message, Topic
 
 from connector.main import (
-    mqtt_message_handler,
     get_kafka_producer_params,
+    mqtt_message_handler,
     send_to_kafka,
 )
 
