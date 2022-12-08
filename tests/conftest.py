@@ -1,3 +1,9 @@
-from dotenv import load_dotenv
+import pytest
 
-load_dotenv('.env.example')
+from connector import Connector
+
+
+@pytest.fixture
+def conn():
+    conn = Connector()
+    return conn

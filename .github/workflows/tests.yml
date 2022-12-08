@@ -22,7 +22,7 @@ jobs:
   test:
     strategy:
       matrix:
-        python: ['3.9', '3.10', '3.11']
+        python: ['3.8', '3.9', '3.10', '3.11']
         platform: [ubuntu-latest]
     runs-on: ${{ matrix.platform }}
     steps:
@@ -40,6 +40,9 @@ jobs:
 
     - name: Linters
       run: make lint
+
+    - name: Env for test
+      run: cp .env.example .env
 
     - name: Test
       run: make test
