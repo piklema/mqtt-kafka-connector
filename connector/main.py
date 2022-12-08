@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import sys
-from typing import Dict, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import asyncio_mqtt as aiomqtt
 from aiokafka import AIOKafkaProducer
@@ -10,7 +10,7 @@ from kafka.errors import KafkaConnectionError
 
 from connector.conf import (
     KAFKA_BOOTSTRAP_SERVERS,
-    KAFKA_HEADERS_TEMPLATE,
+    KAFKA_HEADERS_LIST,
     KAFKA_TOPIC_TEMPLATE,
     MQTT_CLIENT_ID,
     MQTT_HOST,
@@ -26,14 +26,14 @@ from connector.utils import Template
 logger = logging.getLogger(__name__)
 
 
-KafkaHeadersType = Dict[str, bytes]
+KafkaHeadersType = List[Tuple[str, bytes]]
 TopicHeaders = Tuple[str, KafkaHeadersType]
 
 
 class Connector:
     def __init__(self):
         self.tpl = Template(MQTT_TOPIC_SOURCE_TEMPLATE)
-        self.header_names = KAFKA_HEADERS_TEMPLATE.split('|')
+        self.header_names = KAFKA_HEADERS_LIST.split(',')
 
     def get_kafka_producer_params(
         self,
@@ -47,14 +47,14 @@ class Connector:
                 for k, v in headers.items()
                 if k in self.header_names
             ]
-            return (kafka_topic, kafka_headers)
+            return kafka_topic, kafka_headers
         return None
 
+    @staticmethod
     async def send_to_kafka(
-        self,
         topic: str,
         value: bytes,
-        headers: Dict = None,
+        headers: List = None,
     ) -> bool:
         producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
         try:

@@ -41,5 +41,8 @@ jobs:
     - name: Linters
       run: make lint
 
+    - name: Env for test
+      run: cp .env.example .env
+
     - name: Test
       run: make test

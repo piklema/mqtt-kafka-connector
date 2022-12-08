@@ -1,5 +1,4 @@
 import pytest
-from dotenv import load_dotenv
 
 from connector import Connector
 
@@ -8,6 +7,3 @@ from connector import Connector
 def conn():
     conn = Connector()
     return conn
-
-
-load_dotenv('.env.example')
