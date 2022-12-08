@@ -4,8 +4,6 @@ import pytest
 from aiokafka import errors
 from asyncio_mqtt import Message, Topic
 
-from connector.main import Connector
-
 MQTT_TOPIC = 'customer/CUSTOMER_ID/dev/DEVICE_ID/v42'
 
 
