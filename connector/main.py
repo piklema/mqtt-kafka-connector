@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import sys
+import uuid
 from typing import List, Optional, Tuple
 
 import asyncio_mqtt as aiomqtt
@@ -20,6 +21,7 @@ from connector.conf import (
     MQTT_TOPIC_SOURCE_MATCH,
     MQTT_TOPIC_SOURCE_TEMPLATE,
     MQTT_USER,
+    TRACE_HEADER,
 )
 from connector.utils import Template
 
@@ -59,7 +61,7 @@ class Connector:
         producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
         try:
             await producer.start()
-            await producer.send(topic, value, headers=headers)
+            await producer.send(topic, value, headers=headers, key=b'222')
             logger.info(f'Send to kafka {topic=}, {value=}, {headers=}')
             return True
         except KafkaConnectionError as e:
@@ -69,14 +71,20 @@ class Connector:
             await producer.stop()
 
     async def mqtt_message_handler(self, message: Message) -> bool:
+        message_uuid = uuid.uuid4().hex.encode()
         mqtt_topic = message.topic
         logger.info(
             f'Message received from {mqtt_topic.value=} '
-            f'{message.payload=} {message.qos=}'
+            f'{message.payload=} {message.qos=}',
+            extra={TRACE_HEADER: message_uuid},
         )
         res = self.get_kafka_producer_params(mqtt_topic.value)
         if res:
             kafka_topic, kafka_headers = res
+
+            if TRACE_HEADER:
+                kafka_headers.append((TRACE_HEADER, message_uuid))
+
             res = await self.send_to_kafka(
                 kafka_topic,
                 message.payload,
@@ -101,7 +109,6 @@ class Connector:
                     client_id=MQTT_CLIENT_ID,
                     clean_session=False,
                 ) as client:
-
                     async with client.messages() as messages:
                         await client.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=2)
                         async for message in messages:

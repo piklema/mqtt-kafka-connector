@@ -33,7 +33,6 @@ async def test_send_to_kafka(producer_mock, conn, caplog):
     with mock.patch(
         'connector.main.AIOKafkaProducer.start', new_callable=mock.AsyncMock
     ) as start_mock:
-
         start_mock.side_effect = errors.KafkaConnectionError()
         res = await conn.send_to_kafka('unmatched_topic', value=b'some_bytes2')
         assert res is False
@@ -44,7 +43,6 @@ async def test_send_to_kafka(producer_mock, conn, caplog):
 @pytest.mark.asyncio
 # @mock.patch('connector.main.send_to_kafka')
 async def test_mqtt_handler(conn, caplog):
-
     topic = Topic(MQTT_TOPIC)
     msg = Message(
         topic=topic, payload=b'some_payload', qos=2, retain=False, mid=0
