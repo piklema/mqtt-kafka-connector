@@ -2,3 +2,4 @@ aiokafka==0.8.0
 asyncio-mqtt==0.16.1
 httpx==0.23.3
 python-dotenv==1.0.0
+sentry-sdk==1.17.0
