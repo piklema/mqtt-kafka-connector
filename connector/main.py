@@ -22,6 +22,7 @@ from connector.conf import (
     MQTT_TOPIC_SOURCE_TEMPLATE,
     MQTT_USER,
     TRACE_HEADER,
+    MESSAGE_DESERIALIZE,
 )
 from connector.utils import Template
 
@@ -33,9 +34,10 @@ TopicHeaders = Tuple[str, KafkaHeadersType]
 
 
 class Connector:
-    def __init__(self):
+    def __init__(self, message_deserialize: bool = False):
         self.tpl = Template(MQTT_TOPIC_SOURCE_TEMPLATE)
         self.header_names = KAFKA_HEADERS_LIST.split(',')
+        self.message_deserialize = message_deserialize
 
     def get_kafka_producer_params(
         self,
@@ -82,6 +84,9 @@ class Connector:
         if res:
             kafka_topic, kafka_headers = res
 
+            if self.message_deserialize:
+                pass
+
             if TRACE_HEADER:
                 kafka_headers.append((TRACE_HEADER, message_uuid))
 
@@ -123,7 +128,7 @@ class Connector:
 
 
 def main():
-    conn = Connector()
+    conn = Connector(message_deserialize=MESSAGE_DESERIALIZE)
     asyncio.run(conn.run())
 
 
