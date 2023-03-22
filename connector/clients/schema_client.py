@@ -6,7 +6,7 @@ from functools import lru_cache
 class SchemaClient(BaseHTTPClient):
     @lru_cache()
     async def get_schema(self, schema_id: int) -> dict:
-        return await self.get(path=f"/api/v1/schemas/{schema_id}")
+        return await self.get(f'{SCHEMA_REGISTRY_URL}/{schema_id}')
 
 
 headers = (
@@ -21,7 +21,4 @@ headers = (
 )
 
 
-schema_client = SchemaClient(
-    base_url=SCHEMA_REGISTRY_URL,
-    headers=headers,
-)
+schema_client = SchemaClient(headers=headers)

@@ -9,14 +9,11 @@ logger = logging.getLogger(__name__)
 
 
 class BaseHTTPClient:
-    def __init__(self, base_url: str, headers: dict):
-        self.base_url = base_url
+    def __init__(self, headers: dict):
         self.headers = headers
 
-    async def request(self, path: str, method: str, **kwargs) -> dict:
-        url = f'{self.base_url}{path}'
+    async def request(self, url: str, method: str, **kwargs) -> dict:
         logger.info(f'HTTP request: {method=}, {url=}, {kwargs=}')
-
         async with httpx.AsyncClient(
             headers=self.headers, timeout=1
         ) as client:
