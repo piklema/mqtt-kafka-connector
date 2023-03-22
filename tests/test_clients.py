@@ -15,16 +15,14 @@ async def test_http_client(httpx_mock):
     httpx_mock.return_value = DummyResponse(200, params)
     client = BaseHTTPClient(headers={'Authorization': 'Token 123'})
     resp_json = await client.request(
-        url='https://domain.com/api/v1/schemas/1', method='get', params=params
+        url=SCHEMA_URL, method='get', params=params
     )
     assert resp_json == params
 
     # test 404
     httpx_mock.return_value = DummyResponse(404, params)
     with pytest.raises(RuntimeError) as excinfo:
-        await client.get(
-            url='https/domain.com/api/v1/schemas/1', params=params
-        )
+        await client.get(url=SCHEMA_URL, params=params)
 
     assert '404' in str(excinfo.value)
 
