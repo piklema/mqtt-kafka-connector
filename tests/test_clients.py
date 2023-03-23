@@ -1,10 +1,10 @@
 from unittest.mock import patch
+
 import pytest
+from conftest import DummyResponse
 
 from connector.clients.base_http import BaseHTTPClient
 from connector.clients.schema_client import SchemaClient
-
-from conftest import DummyResponse
 
 SCHEMA_URL = 'https://domain.com/api/v1/schemas'
 

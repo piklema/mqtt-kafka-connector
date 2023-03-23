@@ -1,10 +1,14 @@
+import dataclasses
+import typing
 from unittest import mock
 
-import pytest
 from aiokafka import errors
 from asyncio_mqtt import Message, Topic
+from dataclasses_avroschema import AvroModel
 
-MQTT_TOPIC = 'customer/CUSTOMER_ID/dev/DEVICE_ID/v42'
+from connector.main import Connector
+
+MQTT_TOPIC = 'customer/11111/dev/22222/v333333'
 
 
 def test_get_kafka_producer_params(conn):
@@ -12,14 +16,13 @@ def test_get_kafka_producer_params(conn):
     assert res is not None
 
     kafka_topic, kafka_headers = res
-    assert kafka_topic == 'customer_CUSTOMER_ID'
+    assert kafka_topic == 'customer_11111'
     assert set(kafka_headers) == {
-        ('schema_version', b'42'),
-        ('device_id', b'DEVICE_ID'),
+        ('schema_id', b'333333'),
+        ('device_id', b'22222'),
     }
 
 
-@pytest.mark.asyncio
 @mock.patch('connector.main.AIOKafkaProducer.send')
 async def test_send_to_kafka(producer_mock, conn, caplog):
     with mock.patch(
@@ -40,7 +43,6 @@ async def test_send_to_kafka(producer_mock, conn, caplog):
         assert caplog.records[-1].levelname == 'ERROR'
 
 
-@pytest.mark.asyncio
 async def test_mqtt_handler(conn, caplog):
     topic = Topic(MQTT_TOPIC)
     msg = Message(
@@ -59,7 +61,7 @@ async def test_mqtt_handler(conn, caplog):
     res = await conn.mqtt_message_handler(msg)
     assert res is True
 
-    assert send_to_kafka_mock.call_args.args[0] == 'customer_CUSTOMER_ID'
+    assert send_to_kafka_mock.call_args.args[0] == 'customer_11111'
     assert send_to_kafka_mock.call_args.args[1] == b'some_payload'
     assert 'headers' in send_to_kafka_mock.call_args.kwargs
     assert len(caplog.records) == 1
@@ -71,3 +73,37 @@ async def test_mqtt_handler(conn, caplog):
 
     assert len(caplog.records) == 3
     assert caplog.records[-1].levelname == 'WARNING'
+
+
+@dataclasses.dataclass
+class TestMessage(AvroModel):
+    test_tag: typing.Optional[float] = None
+
+
+@mock.patch('connector.main.AIOKafkaProducer.start', mock.AsyncMock())
+@mock.patch('connector.main.AIOKafkaProducer.stop', mock.AsyncMock())
+@mock.patch('connector.main.AIOKafkaProducer.send')
+@mock.patch('connector.main.schema_client.get_schema')
+async def test_deserialize(schema_mock, kafka_mock):
+    topic = Topic(MQTT_TOPIC)
+    schema_mock.return_value = TestMessage().avro_schema_to_python()
+
+    conn = Connector(message_deserialize=True)
+
+    message = TestMessage(test_tag=11.01)
+    msg = Message(
+        topic=topic,
+        payload=message.serialize(),
+        qos=2,
+        retain=False,
+        mid=0,
+        properties=None,
+    )
+    await conn.mqtt_message_handler(msg)
+
+    assert kafka_mock.call_args[0][0] == 'customer_11111'
+    assert kafka_mock.call_args[0][1] == b'{"test_tag": 11.01}'
+    headers = kafka_mock.call_args.kwargs['headers']
+    assert headers[0] == ('device_id', b'22222')
+    assert headers[1] == ('schema_id', b'333333')
+    assert headers[2][0] == 'message_uuid'

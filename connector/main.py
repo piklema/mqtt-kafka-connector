@@ -1,18 +1,24 @@
 import asyncio
+import io
+import json
 import logging
 import sys
 import uuid
+from functools import lru_cache
 from typing import List, Optional, Tuple
 
 import asyncio_mqtt as aiomqtt
+import fastavro
 from aiokafka import AIOKafkaProducer
 from asyncio_mqtt import Message
 from kafka.errors import KafkaConnectionError
 
+from connector.clients.schema_client import schema_client
 from connector.conf import (
     KAFKA_BOOTSTRAP_SERVERS,
     KAFKA_HEADERS_LIST,
     KAFKA_TOPIC_TEMPLATE,
+    MESSAGE_DESERIALIZE,
     MQTT_CLIENT_ID,
     MQTT_HOST,
     MQTT_PASSWORD,
@@ -22,7 +28,6 @@ from connector.conf import (
     MQTT_TOPIC_SOURCE_TEMPLATE,
     MQTT_USER,
     TRACE_HEADER,
-    MESSAGE_DESERIALIZE,
 )
 from connector.utils import Template
 
@@ -38,6 +43,7 @@ class Connector:
         self.tpl = Template(MQTT_TOPIC_SOURCE_TEMPLATE)
         self.header_names = KAFKA_HEADERS_LIST.split(',')
         self.message_deserialize = message_deserialize
+        self.schema_client = schema_client
 
     def get_kafka_producer_params(
         self,
@@ -72,6 +78,26 @@ class Connector:
         finally:
             await producer.stop()
 
+    @lru_cache()
+    async def get_schema(self, schema_id) -> dict:
+        return await self.schema_client.get_schema(schema_id)
+
+    async def deserialize(self, msg: Message, schema_id: int) -> dict:
+        schema = await self.get_schema(schema_id)
+
+        if not schema:
+            raise RuntimeError('Schema not found')
+
+        fp = io.BytesIO(msg.payload)
+        try:
+            data = fastavro.schemaless_reader(fp, schema)
+        except (IndexError, StopIteration):
+            raise RuntimeError('Message is not valid')
+
+        logger.info(f"Message deserialized: {data=}")
+
+        return data
+
     async def mqtt_message_handler(self, message: Message) -> bool:
         message_uuid = uuid.uuid4().hex.encode()
         mqtt_topic = message.topic
@@ -85,14 +111,18 @@ class Connector:
             kafka_topic, kafka_headers = res
 
             if self.message_deserialize:
-                pass
+                schema_id = int(dict(kafka_headers)['schema_id'])
+                msg_dict = await self.deserialize(message, schema_id)
+                data = json.dumps(msg_dict).encode()
+            else:
+                data = message.payload
 
             if TRACE_HEADER:
                 kafka_headers.append((TRACE_HEADER, message_uuid))
 
             res = await self.send_to_kafka(
                 kafka_topic,
-                message.payload,
+                data,
                 headers=kafka_headers,
             )
             return res

@@ -1,10 +1,8 @@
 from connector.clients.base_http import BaseHTTPClient
-from connector.conf import SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY_REQUEST_HEADERS
-from functools import lru_cache
+from connector.conf import SCHEMA_REGISTRY_REQUEST_HEADERS, SCHEMA_REGISTRY_URL
 
 
 class SchemaClient(BaseHTTPClient):
-    @lru_cache()
     async def get_schema(self, schema_id: int) -> dict:
         return await self.get(f'{SCHEMA_REGISTRY_URL}/{schema_id}')
 
