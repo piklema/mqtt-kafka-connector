@@ -4,7 +4,6 @@ import json
 import logging
 import sys
 import uuid
-from functools import lru_cache
 from typing import List, Optional, Tuple
 
 import asyncio_mqtt as aiomqtt
@@ -78,12 +77,8 @@ class Connector:
         finally:
             await producer.stop()
 
-    @lru_cache()
-    async def get_schema(self, schema_id) -> dict:
-        return await self.schema_client.get_schema(schema_id)
-
     async def deserialize(self, msg: Message, schema_id: int) -> dict:
-        schema = await self.get_schema(schema_id)
+        schema = await self.schema_client.get_schema(schema_id)
 
         if not schema:
             raise RuntimeError('Schema not found')

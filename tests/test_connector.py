@@ -1,5 +1,4 @@
 import dataclasses
-import typing
 from unittest import mock
 
 from aiokafka import errors
@@ -77,7 +76,7 @@ async def test_mqtt_handler(conn, caplog):
 
 @dataclasses.dataclass
 class TestMessage(AvroModel):
-    test_tag: typing.Optional[float] = None
+    test_tag: float
 
 
 @mock.patch('connector.main.AIOKafkaProducer.start', mock.AsyncMock())
@@ -86,7 +85,7 @@ class TestMessage(AvroModel):
 @mock.patch('connector.main.schema_client.get_schema')
 async def test_deserialize(schema_mock, kafka_mock):
     topic = Topic(MQTT_TOPIC)
-    schema_mock.return_value = TestMessage().avro_schema_to_python()
+    schema_mock.return_value = TestMessage.avro_schema_to_python()
 
     conn = Connector(message_deserialize=True)
 

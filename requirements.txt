@@ -1,4 +1,5 @@
 aiokafka==0.8.0
+async_lru==2.0.2
 asyncio-mqtt==0.16.1
 dataclasses-avroschema==0.38.1
 httpx==0.23.3

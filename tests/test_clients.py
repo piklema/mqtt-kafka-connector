@@ -42,3 +42,24 @@ async def test_schema_client(http_mock):
     assert http_mock.call_count == 1
     assert http_mock.call_args[0][1] == f'{SCHEMA_URL}/1'
     assert http_mock.call_args[1]['headers'] == {'Authorization': 'Token 123'}
+
+
+@patch('httpx.AsyncClient.request')
+async def test_lru(http_mock):
+    data = {'test': 'test'}
+    http_mock.return_value = DummyResponse(200, data)
+
+    client = SchemaClient(
+        headers={'Authorization': 'Token 123'},
+    )
+    res = await client.get_schema(1)
+    assert res
+    assert http_mock.call_count == 1
+
+    res = await client.get_schema(2)
+    assert res
+    assert http_mock.call_count == 2
+
+    res = await client.get_schema(1)
+    assert res
+    assert http_mock.call_count == 2
