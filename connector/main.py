@@ -69,7 +69,7 @@ class Connector:
         producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
         try:
             await producer.start()
-            await producer.send(topic, value, headers=headers, key=b'222')
+            await producer.send(topic, value, headers=headers)
             logger.info(f'Send to kafka {topic=}, {value=}, {headers=}')
             return True
         except KafkaConnectionError as e:
