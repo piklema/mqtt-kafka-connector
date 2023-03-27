@@ -1,10 +1,10 @@
 -r requirements.txt
-black==22.10.0
+black==23.1.0
 flake8==6.0.0
-isort==5.10.1
-pytest==7.2.0
-pytest-asyncio==0.20.2
+isort==5.12.0
+pytest==7.2.2
+pytest-asyncio==0.21.0
 pytest-cov==4.0.0
 twine==4.0.2
-watchdog==2.1.9
-wheel==0.38.4
+watchdog==3.0.0
+wheel==0.40.0

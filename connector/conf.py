@@ -2,7 +2,9 @@ import logging.config
 import os
 import uuid
 
+import sentry_sdk
 from dotenv import load_dotenv
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 load_dotenv()
 
@@ -18,6 +20,25 @@ MQTT_TOPIC_SOURCE_TEMPLATE = os.getenv('MQTT_TOPIC_SOURCE_TEMPLATE')
 KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS')
 KAFKA_TOPIC_TEMPLATE = os.getenv('KAFKA_TOPIC_TEMPLATE')
 KAFKA_HEADERS_LIST = os.getenv('KAFKA_HEADERS_LIST')
+TRACE_HEADER = os.getenv('TRACE_HEADER')
+SCHEMA_REGISTRY_URL = os.getenv('SCHEMA_REGISTRY_URL')
+SCHEMA_REGISTRY_REQUEST_HEADERS = os.getenv('SCHEMA_REGISTRY_REQUEST_HEADERS')
+MESSAGE_DESERIALIZE = SCHEMA_REGISTRY_URL and SCHEMA_REGISTRY_REQUEST_HEADERS
+
+SENTRY_DSN = os.getenv('SENTRY_DSN')
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            LoggingIntegration(event_level=int(logging.WARNING)),
+        ],
+        traces_sample_rate=0.5,
+        send_default_pii=True,
+        attach_stacktrace=False,
+        max_breadcrumbs=20,
+    )
+
 
 LOGGING = {
     'version': 1,
