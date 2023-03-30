@@ -28,6 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'mqtt_kafka_connector=connector.main:main',
+            'send_test_data=connector.send:send_test_data',
         ],
     },
     install_requires=requirements,

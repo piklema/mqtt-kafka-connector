@@ -13,3 +13,14 @@ $ make test
 ```shell
 $ mqtt_kafka_connector
 ```
+
+### Run send test message command
+```shell
+send_test_message connector/test.cfg data/sorted_emulation_file.csv
+```
+You need to preprocess data file before send it to kafka.
+```shell
+# Remove the first line and save it to a variable
+header=$(head -n 1 data/emulation_file.csv)
+sed '1d' data/emulation_file.csv | sort -t ',' -k1 | (echo $header && cat) > data/sorted_emulation_file.csv
+```
