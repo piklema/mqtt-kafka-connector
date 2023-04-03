@@ -1,27 +1,28 @@
-from collections import defaultdict
-import csv
 import argparse
-import logging
-from typing import TextIO
-from dataclasses import dataclass
+import asyncio
+import csv
 import datetime as dt
+import logging
 import time
+from dataclasses import dataclass
+from typing import Iterator, TextIO
 
-from connector.main import Connector
+import asyncio_mqtt as aiomqtt
+from dataclasses_avroschema import AvroModel
+
+from connector import conf
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class ConfLine:
-    """Para"""
-
     vehicle_id_src: int
     vehicle_id_dst: int
 
 
 @dataclass
-class TruckTelemetry:
+class TruckTelemetry(AvroModel):
     time: dt.datetime
     object_id: int
     weight_dynamic: float
@@ -31,6 +32,11 @@ class TruckTelemetry:
     lon: float
     speed: float
     course: float
+
+
+@dataclass
+class TruckTelemetryList(AvroModel):
+    data: list[TruckTelemetry]
 
 
 def parse_conf_file(fp: TextIO) -> dict[int, ConfLine]:
@@ -54,7 +60,7 @@ def parse_conf_file(fp: TextIO) -> dict[int, ConfLine]:
     return conf_dict
 
 
-def send_test_data():
+def main():
     parser = argparse.ArgumentParser(description='Send test data to Kafka')
     parser.add_argument(
         'config_filename',
@@ -67,54 +73,68 @@ def send_test_data():
         help='CSV file with data',
         default='',
     )
+    parser.add_argument(
+        'customer_id',
+        type=argparse.IntType(),
+        help='customer_id',
+        # default='',
+    )
+    parser.add_argument(
+        'schema_id',
+        type=argparse.IntType(),
+        help='schema_id',
+        # default='',
+    )
     args = parser.parse_args()
     conf_dict = parse_conf_file(args.config_filename)
-    start_at = time.time()
-    print(f'Started at {start_at}')
-    # Для каждого транспортного средства собираем данные, не более 10 штук,
-    # либо не более 10 секунд, затем отправляем в кафку
-    truck_bunch_data: defaultdict[int, list[TruckTelemetry]] = defaultdict(
-        list
-    )
-    trucks = read_telemetry_data(args.csv_data_filename, conf_dict)
-    for truck in trucks:
-        bunch = truck_bunch_data[truck.object_id]
-        display_bunches(truck_bunch_data)
-        if len(bunch) >= 10 or check_timeout(truck, bunch):
-            send_to_kafka(bunch)
-            bunch = []
-        bunch.append(truck)
-        truck_bunch_data[truck.object_id] = bunch
-
-    # connector = Connector()
-    # connector.send_to_kafka(args.topic, args.message.encode('utf-8'))
+    asyncio.run(send_test_data(args.csv_data_filename, conf_dict, args))
 
 
-def display_bunches(truck_bunch_data: defaultdict[int, list[TruckTelemetry]]):
-    print(f'\nBunches: ----------------------------------------')
-    for object_id, bunch in truck_bunch_data.items():
-        progress = '=' * len(bunch) + f' {len(bunch)}'
-        if len(bunch) < 1:
-            period = 0
-        else:
-            period = (bunch[-1].time - bunch[0].time).total_seconds()
-        print(f'{object_id} {period}s {progress}')
-    print('\n\n')
-    time.sleep(0.1)
+async def send_test_data(
+    csv_data_filename: TextIO,
+    conf_dict: dict[int, ConfLine],
+    args: argparse.Namespace,
+):
+    async with aiomqtt.Client(
+        hostname=conf.MQTT_HOST,
+        port=conf.MQTT_PORT,
+        username=conf.MQTT_USER,
+        password=conf.MQTT_PASSWORD,
+        client_id=conf.MQTT_CLIENT_ID,
+        clean_session=False,
+    ) as client:
+        while True:
+            tt_gen = read_telemetry_data(csv_data_filename, conf_dict)
+
+            prev_tt_time = None
+            for tt in tt_gen:
+                payload = tt.serialize()
+                device_id = tt.object_id  # TODO
+                topic = conf.MQTT_TOPIC_SOURCE_TEMPLATE.format(
+                    customer_id=args.customer_id,
+                    device_id=device_id,
+                    schema_id=args.schema_id,
+                )
+                await client.publish(topic, payload)
+
+                period = tt.time - (prev_tt_time or 0)
+                time.sleep(period.total_seconds())
+                prev_tt_time = tt.time
 
 
-def send_to_kafka(bunch: list[TruckTelemetry]):
-    print(f'\nSENDING {len(bunch)} for OBJECT_ID {bunch[0].object_id}\n')
-    time.sleep(1)
+async def send_to_kafka(client, tt: TruckTelemetry):
+    display_bunches(tt)
+    await client.publish()
 
 
-def check_timeout(truck: TruckTelemetry, bunch: list[TruckTelemetry]) -> bool:
-    if not bunch:
-        return False
-    return (truck.time - bunch[0].time).total_seconds() > 10
+def display_bunches(tt: TruckTelemetry) -> None:
+    at = dt.datetime.now()
+    print(at, tt)
 
 
-def read_telemetry_data(fp: TextIO, conf_dict: dict[int, ConfLine]):
+def read_telemetry_data(
+    fp: TextIO, conf_dict: dict[int, ConfLine]
+) -> Iterator[TruckTelemetry]:
     csv_reader = csv.DictReader(fp)
     for row in csv_reader:
         time = dt.datetime.fromisoformat(row['time'])
@@ -142,4 +162,4 @@ def read_telemetry_data(fp: TextIO, conf_dict: dict[int, ConfLine]):
 
 
 if __name__ == '__main__':
-    send_test_data()
+    main()

@@ -1,7 +1,16 @@
-from io import StringIO
+import datetime as dt
 import types
+from io import StringIO
+
 import pytest
-from connector.send import parse_conf_file, send_test_data, read_telemetry_data
+
+from connector.send import (
+    TruckTelemetry,
+    TruckTelemetryList,
+    parse_conf_file,
+    read_telemetry_data,
+    send_test_data,
+)
 
 
 @pytest.fixture
@@ -46,3 +55,33 @@ def test_read_telemetry_data(config_content, data_content):
     conf_dict = parse_conf_file(config_content)
     gen = read_telemetry_data(data_content, conf_dict)
     assert isinstance(gen, types.GeneratorType)
+    truck = next(gen)
+    assert truck.object_id == 11
+    assert next(gen).object_id == 12
+
+
+@pytest.mark.asyncio
+async def test_send_test_data(config_content, data_content):
+    conf_dict = parse_conf_file(config_content)
+    args = types.SimpleNamespace()
+    await send_test_data(data_content, conf_dict, args)
+
+
+def test_avro_serialization():
+    ttl = TruckTelemetryList(
+        data=[
+            TruckTelemetry(
+                time=dt.datetime.now(),
+                object_id=894,
+                weight_dynamic=186.0,
+                accelerator_position=0.0,
+                height=820.0,
+                lat=51.51025,
+                lon=118.58797,
+                speed=0.3,
+                course=0.0,
+            )
+        ]
+    )
+    payload = ttl.serialize()
+    assert type(payload) == bytes
