@@ -5,7 +5,7 @@ import datetime as dt
 import logging
 import time
 from dataclasses import dataclass
-from typing import Iterator, TextIO
+from typing import Iterator, List, TextIO
 
 import asyncio_mqtt as aiomqtt
 from dataclasses_avroschema import AvroModel
@@ -36,7 +36,7 @@ class TruckTelemetry(AvroModel):
 
 @dataclass
 class TruckTelemetryList(AvroModel):
-    data: list[TruckTelemetry]
+    data: List[TruckTelemetry]
 
 
 def main():  # pragma: no cover
