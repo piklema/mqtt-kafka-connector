@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ConfLine:
-    vehicle_id_src: int
-    vehicle_id_dst: int
+    object_id: int
+    device_id: int
 
 
 @dataclass
@@ -39,7 +39,7 @@ class TruckTelemetryList(AvroModel):
     data: list[TruckTelemetry]
 
 
-def main():
+def main():  # pragma: no cover
     parser = argparse.ArgumentParser(description='Send test data to Kafka')
     parser.add_argument(
         'config_filename',
@@ -91,8 +91,8 @@ def parse_conf_file(fp: TextIO) -> dict[int, ConfLine]:
             continue
         vehicle_id_src = int(vehicle_id_src)
         conf_dict[vehicle_id_src] = ConfLine(
-            vehicle_id_src=vehicle_id_src,
-            vehicle_id_dst=int(vehicle_id_dst),
+            object_id=vehicle_id_src,
+            device_id=int(vehicle_id_dst),
         )
     return conf_dict
 
@@ -101,7 +101,6 @@ async def send_test_data(
     csv_data_filename: TextIO,
     conf_dict: dict[int, ConfLine],
     args: argparse.Namespace,
-    infinite: bool = True,
 ):
     async with aiomqtt.Client(
         hostname=conf.MQTT_HOST,
@@ -159,7 +158,7 @@ def read_telemetry_data(
         lon = float(row['lon'])
         speed = float(row['speed'])
         course = float(row['course'])
-        object_id_dst = conf_dict[object_id].vehicle_id_dst
+        object_id_dst = conf_dict[object_id].device_id
         truck_telemetry = TruckTelemetry(
             time=time,
             object_id=object_id_dst,

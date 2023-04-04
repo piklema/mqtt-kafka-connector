@@ -70,10 +70,9 @@ async def test_send_test_data(config_content, data_content):
     args.infinite = False
     with patch('connector.send.aiomqtt.Client') as mock_client:
         mock_client.return_value = AsyncMock()
-        mock_client.return_value.publish = AsyncMock()
         await send_test_data(data_content, conf_dict, args)
         assert mock_client.call_count == 1
-        assert mock_client.return_value.publish.call_count == 2
+        assert mock_client.mock_calls[2][1][0] == 'customer/1/dev/11/v1'
 
 
 def test_avro_serialization():
