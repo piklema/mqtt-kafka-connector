@@ -23,7 +23,7 @@ class ConfLine:
 @dataclass
 class TruckTelemetry:
     time: dt.datetime
-    object_id: int
+    device_id: int
     weight_dynamic: float
     accelerator_position: float
     height: float
@@ -58,12 +58,6 @@ def main():  # pragma: no cover
         '--customer_id',
         type=int,
         help='customer_id',
-    )
-    parser.add_argument(
-        '-s',
-        '--schema_id',
-        type=int,
-        help='schema_id',
     )
     parser.add_argument(
         '-i',
@@ -106,7 +100,6 @@ async def send_test_data(
     kafka_topic = conf.KAFKA_TOPIC_TEMPLATE.format(
         customer_id=args.customer_id
     )
-    schema_id_bytes = str(args.schema_id).encode()
     conn = Connector(message_deserialize=False)
     while True:
         tt_gen = read_telemetry_data(csv_data_filename, conf_dict)
@@ -115,8 +108,8 @@ async def send_test_data(
         for tt in tt_gen:
             data = json.dumps(asdict(tt), cls=DateTimeEncoder).encode()
             kafka_headers = [
-                ('device_id', str(tt.object_id).encode()),
-                ('schema_id', schema_id_bytes),
+                ('device_id', str(tt.device_id).encode()),
+                ('message_deserialized', b'1'),
             ]
             logger.debug('Publishing to %s', kafka_topic)
             await conn.send_to_kafka(
@@ -148,10 +141,10 @@ def read_telemetry_data(
         lon = float(row['lon'])
         speed = float(row['speed'])
         course = float(row['course'])
-        object_id_dst = conf_dict[object_id].device_id
+        device_id = conf_dict[object_id].device_id
         truck_telemetry = TruckTelemetry(
             time=time,
-            object_id=object_id_dst,
+            device_id=device_id,
             weight_dynamic=weight_dynamic,
             accelerator_position=accelerator_position,
             height=height,

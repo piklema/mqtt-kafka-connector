@@ -50,8 +50,8 @@ def test_read_telemetry_data(config_content, data_content):
     gen = read_telemetry_data(data_content, conf_dict)
     assert isinstance(gen, types.GeneratorType)
     truck = next(gen)
-    assert truck.object_id == 11
-    assert next(gen).object_id == 12
+    assert truck.device_id == 11
+    assert next(gen).device_id == 12
 
 
 @pytest.mark.asyncio
