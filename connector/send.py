@@ -5,7 +5,7 @@ import datetime as dt
 import logging
 import time
 from dataclasses import dataclass
-from typing import Iterator, List, TextIO
+from typing import Dict, Iterator, List, TextIO
 
 import asyncio_mqtt as aiomqtt
 from dataclasses_avroschema import AvroModel
@@ -76,8 +76,8 @@ def main():  # pragma: no cover
     asyncio.run(send_test_data(args.csv_data_filename, conf_dict, args))
 
 
-def parse_conf_file(fp: TextIO) -> dict[int, ConfLine]:
-    conf_dict: dict[int, ConfLine] = {}
+def parse_conf_file(fp: TextIO) -> Dict[int, ConfLine]:
+    conf_dict: Dict[int, ConfLine] = {}
     for line in fp:
         line = line.strip()
         if not line:
@@ -99,7 +99,7 @@ def parse_conf_file(fp: TextIO) -> dict[int, ConfLine]:
 
 async def send_test_data(
     csv_data_filename: TextIO,
-    conf_dict: dict[int, ConfLine],
+    conf_dict: Dict[int, ConfLine],
     args: argparse.Namespace,
 ):
     async with aiomqtt.Client(
@@ -145,7 +145,7 @@ def display_bunches(tt: TruckTelemetry) -> None:
 
 
 def read_telemetry_data(
-    fp: TextIO, conf_dict: dict[int, ConfLine]
+    fp: TextIO, conf_dict: Dict[int, ConfLine]
 ) -> Iterator[TruckTelemetry]:
     csv_reader = csv.DictReader(fp)
     for row in csv_reader:
