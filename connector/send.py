@@ -2,15 +2,14 @@ import argparse
 import asyncio
 import csv
 import datetime as dt
+import json
 import logging
 import time
-from dataclasses import dataclass
-from typing import Dict, Iterator, List, TextIO
-
-import asyncio_mqtt as aiomqtt
-from dataclasses_avroschema import AvroModel
+from dataclasses import asdict, dataclass
+from typing import Dict, Iterator, TextIO
 
 from connector import conf
+from connector.main import Connector
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,7 @@ class ConfLine:
 
 
 @dataclass
-class TruckTelemetry(AvroModel):
+class TruckTelemetry:
     time: dt.datetime
     object_id: int
     weight_dynamic: float
@@ -34,9 +33,11 @@ class TruckTelemetry(AvroModel):
     course: float
 
 
-@dataclass
-class TruckTelemetryList(AvroModel):
-    data: List[TruckTelemetry]
+class DateTimeEncoder(json.JSONEncoder):
+    # Override the default method
+    def default(self, obj):
+        if isinstance(obj, (dt.date, dt.datetime)):
+            return obj.isoformat()
 
 
 def main():  # pragma: no cover
@@ -102,46 +103,35 @@ async def send_test_data(
     conf_dict: Dict[int, ConfLine],
     args: argparse.Namespace,
 ):
-    async with aiomqtt.Client(
-        hostname=conf.MQTT_HOST,
-        port=conf.MQTT_PORT,
-        username=conf.MQTT_USER,
-        password=conf.MQTT_PASSWORD,
-        client_id=conf.MQTT_CLIENT_ID,
-        clean_session=False,
-    ) as client:
-        while True:
-            tt_gen = read_telemetry_data(csv_data_filename, conf_dict)
+    kafka_topic = conf.KAFKA_TOPIC_TEMPLATE.format(
+        customer_id=args.customer_id
+    )
+    schema_id_bytes = str(args.schema_id).encode()
+    conn = Connector(message_deserialize=False)
+    while True:
+        tt_gen = read_telemetry_data(csv_data_filename, conf_dict)
 
-            tt_prev_time = None
-            for tt in tt_gen:
-                payload = tt.serialize()
-                device_id = tt.object_id  # TODO
-                topic = conf.MQTT_TOPIC_SOURCE_TEMPLATE.format(
-                    customer_id=args.customer_id,
-                    device_id=device_id,
-                    schema_id=args.schema_id,
-                )
-                logger.debug('Publishing to %s', topic)
-                await client.publish(topic, payload)
+        tt_prev_time = None
+        for tt in tt_gen:
+            data = json.dumps(asdict(tt), cls=DateTimeEncoder).encode()
+            kafka_headers = [
+                ('device_id', str(tt.object_id).encode()),
+                ('schema_id', schema_id_bytes),
+            ]
+            logger.debug('Publishing to %s', kafka_topic)
+            await conn.send_to_kafka(
+                kafka_topic,
+                data,
+                headers=kafka_headers,
+            )
 
-                period = tt.time - (tt_prev_time if tt_prev_time else tt.time)
-                time.sleep(period.total_seconds())
+            period = tt.time - (tt_prev_time if tt_prev_time else tt.time)
+            time.sleep(period.total_seconds())
 
-                tt_prev_time = tt.time
+            tt_prev_time = tt.time
 
-            if args.infinite is False:
-                break
-
-
-async def send_to_kafka(client, tt: TruckTelemetry):
-    display_bunches(tt)
-    await client.publish()
-
-
-def display_bunches(tt: TruckTelemetry) -> None:
-    at = dt.datetime.now()
-    print(at, tt)
+        if args.infinite is False:
+            break
 
 
 def read_telemetry_data(

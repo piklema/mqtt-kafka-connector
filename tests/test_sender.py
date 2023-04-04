@@ -1,17 +1,10 @@
-import datetime as dt
 import types
 from io import StringIO
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from connector.send import (
-    TruckTelemetry,
-    TruckTelemetryList,
-    parse_conf_file,
-    read_telemetry_data,
-    send_test_data,
-)
+from connector.send import parse_conf_file, read_telemetry_data, send_test_data
 
 
 @pytest.fixture
@@ -68,28 +61,8 @@ async def test_send_test_data(config_content, data_content):
     args.customer_id = 1
     args.schema_id = 1
     args.infinite = False
-    with patch('connector.send.aiomqtt.Client') as mock_client:
-        mock_client.return_value = AsyncMock()
+    with patch('connector.send.Connector.send_to_kafka') as mock_send:
+        mock_send.return_value = True
         await send_test_data(data_content, conf_dict, args)
-        assert mock_client.call_count == 1
-        assert mock_client.mock_calls[2][1][0] == 'customer/1/dev/11/v1'
-
-
-def test_avro_serialization():
-    ttl = TruckTelemetryList(
-        data=[
-            TruckTelemetry(
-                time=dt.datetime.now(),
-                object_id=894,
-                weight_dynamic=186.0,
-                accelerator_position=0.0,
-                height=820.0,
-                lat=51.51025,
-                lon=118.58797,
-                speed=0.3,
-                course=0.0,
-            )
-        ]
-    )
-    payload = ttl.serialize()
-    assert type(payload) == bytes
+        assert mock_send.call_count == 2
+        assert mock_send.mock_calls[0].args[0] == 'customer_1'
