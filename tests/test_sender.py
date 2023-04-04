@@ -1,6 +1,7 @@
 import datetime as dt
 import types
 from io import StringIO
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -64,7 +65,15 @@ def test_read_telemetry_data(config_content, data_content):
 async def test_send_test_data(config_content, data_content):
     conf_dict = parse_conf_file(config_content)
     args = types.SimpleNamespace()
-    await send_test_data(data_content, conf_dict, args)
+    args.customer_id = 1
+    args.schema_id = 1
+    args.infinite = False
+    with patch('connector.send.aiomqtt.Client') as mock_client:
+        mock_client.return_value = AsyncMock()
+        mock_client.return_value.publish = AsyncMock()
+        await send_test_data(data_content, conf_dict, args)
+        assert mock_client.call_count == 1
+        assert mock_client.return_value.publish.call_count == 2
 
 
 def test_avro_serialization():

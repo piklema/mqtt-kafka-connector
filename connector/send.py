@@ -39,6 +39,43 @@ class TruckTelemetryList(AvroModel):
     data: list[TruckTelemetry]
 
 
+def main():
+    parser = argparse.ArgumentParser(description='Send test data to Kafka')
+    parser.add_argument(
+        'config_filename',
+        type=argparse.FileType('r'),
+        help='File with configuration',
+    )
+    parser.add_argument(
+        'csv_data_filename',
+        type=argparse.FileType('r'),
+        help='CSV file with data',
+        default='',
+    )
+    parser.add_argument(
+        '-c',
+        '--customer_id',
+        type=int,
+        help='customer_id',
+    )
+    parser.add_argument(
+        '-s',
+        '--schema_id',
+        type=int,
+        help='schema_id',
+    )
+    parser.add_argument(
+        '-i',
+        '--infinite',
+        action='store_true',
+        help='infinite loop',
+    )
+    args = parser.parse_args()
+    conf_dict = parse_conf_file(args.config_filename)
+    logger.info('Start emulating data')
+    asyncio.run(send_test_data(args.csv_data_filename, conf_dict, args))
+
+
 def parse_conf_file(fp: TextIO) -> dict[int, ConfLine]:
     conf_dict: dict[int, ConfLine] = {}
     for line in fp:
@@ -60,40 +97,11 @@ def parse_conf_file(fp: TextIO) -> dict[int, ConfLine]:
     return conf_dict
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Send test data to Kafka')
-    parser.add_argument(
-        'config_filename',
-        type=argparse.FileType('r'),
-        help='File with configuration',
-    )
-    parser.add_argument(
-        'csv_data_filename',
-        type=argparse.FileType('r'),
-        help='CSV file with data',
-        default='',
-    )
-    parser.add_argument(
-        'customer_id',
-        type=argparse.IntType(),
-        help='customer_id',
-        # default='',
-    )
-    parser.add_argument(
-        'schema_id',
-        type=argparse.IntType(),
-        help='schema_id',
-        # default='',
-    )
-    args = parser.parse_args()
-    conf_dict = parse_conf_file(args.config_filename)
-    asyncio.run(send_test_data(args.csv_data_filename, conf_dict, args))
-
-
 async def send_test_data(
     csv_data_filename: TextIO,
     conf_dict: dict[int, ConfLine],
     args: argparse.Namespace,
+    infinite: bool = True,
 ):
     async with aiomqtt.Client(
         hostname=conf.MQTT_HOST,
@@ -106,7 +114,7 @@ async def send_test_data(
         while True:
             tt_gen = read_telemetry_data(csv_data_filename, conf_dict)
 
-            prev_tt_time = None
+            tt_prev_time = None
             for tt in tt_gen:
                 payload = tt.serialize()
                 device_id = tt.object_id  # TODO
@@ -115,11 +123,16 @@ async def send_test_data(
                     device_id=device_id,
                     schema_id=args.schema_id,
                 )
+                logger.debug('Publishing to %s', topic)
                 await client.publish(topic, payload)
 
-                period = tt.time - (prev_tt_time or 0)
+                period = tt.time - (tt_prev_time if tt_prev_time else tt.time)
                 time.sleep(period.total_seconds())
-                prev_tt_time = tt.time
+
+                tt_prev_time = tt.time
+
+            if args.infinite is False:
+                break
 
 
 async def send_to_kafka(client, tt: TruckTelemetry):
