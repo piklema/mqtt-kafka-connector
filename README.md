@@ -24,3 +24,9 @@ You need to preprocess data file before send it to kafka.
 header=$(head -n 1 data/emulation_file.csv)
 sed '1d' data/emulation_file.csv | sort -t ',' -k1 | (echo $header && cat) > data/sorted_emulation_file.csv
 ```
+Sample test.cfg
+```csv
+# object_id, device_id
+102, 1
+...
+```

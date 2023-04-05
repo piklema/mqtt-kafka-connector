@@ -12,8 +12,8 @@ services:
     volumes:
       - .:/app
     networks:
-      - data-collector_default
+      - piklema-network
 
 networks:
-  data-collector_default:
+  piklema-network:
     external: true

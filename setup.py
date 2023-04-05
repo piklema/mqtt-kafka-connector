@@ -27,8 +27,8 @@ setup(
     description='MQTT Kafka Connector',
     entry_points={
         'console_scripts': [
-            'mqtt_kafka_connector=connector.main:main',
-            'send_test_data=emu.main:main',
+            'mqtt_kafka_connector=mqtt_kafka_connector.connector.main:main',
+            'send_test_data=mqtt_kafka_connector.emu.main:main',
         ],
     },
     install_requires=requirements,

@@ -37,7 +37,8 @@ class DateTimeEncoder(json.JSONEncoder):
     # Override the default method
     def default(self, obj):
         if isinstance(obj, (dt.date, dt.datetime)):
-            return obj.isoformat()
+            aware_dt = obj.replace(tzinfo=dt.timezone.utc)
+            return aware_dt.isoformat()
 
 
 def main():  # pragma: no cover
@@ -106,7 +107,8 @@ async def send_test_data(
 
         tt_prev_time = None
         for tt in tt_gen:
-            data = json.dumps(asdict(tt), cls=DateTimeEncoder).encode()
+            d = {'messages': [asdict(tt)]}
+            data = json.dumps(d, cls=DateTimeEncoder).encode()
             kafka_headers = [
                 ('device_id', str(tt.device_id).encode()),
                 ('message_deserialized', b'1'),
@@ -141,7 +143,10 @@ def read_telemetry_data(
         lon = float(row['lon'])
         speed = float(row['speed'])
         course = float(row['course'])
-        device_id = conf_dict[object_id].device_id
+        try:
+            device_id = conf_dict[object_id].device_id
+        except KeyError:
+            continue
         truck_telemetry = TruckTelemetry(
             time=time,
             device_id=device_id,
