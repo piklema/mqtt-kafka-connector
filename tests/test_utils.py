@@ -1,4 +1,4 @@
-from connector.utils import Template
+from mqtt_kafka_connector.utils import Template
 
 
 def test_template_topic():

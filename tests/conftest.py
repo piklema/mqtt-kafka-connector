@@ -1,6 +1,6 @@
 import pytest
 
-from connector import Connector
+from mqtt_kafka_connector.connector import Connector
 
 
 @pytest.fixture

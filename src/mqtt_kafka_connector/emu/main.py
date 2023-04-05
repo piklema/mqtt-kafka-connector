@@ -8,8 +8,8 @@ import time
 from dataclasses import asdict, dataclass
 from typing import Dict, Iterator, TextIO
 
-from connector import conf
-from connector.main import Connector
+from mqtt_kafka_connector import conf
+from mqtt_kafka_connector.connector import Connector
 
 logger = logging.getLogger(__name__)
 

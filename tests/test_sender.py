@@ -4,7 +4,11 @@ from unittest.mock import patch
 
 import pytest
 
-from connector.send import parse_conf_file, read_telemetry_data, send_test_data
+from mqtt_kafka_connector.emu import (
+    parse_conf_file,
+    read_telemetry_data,
+    send_test_data,
+)
 
 
 @pytest.fixture
@@ -61,7 +65,9 @@ async def test_send_test_data(config_content, data_content):
     args.customer_id = 1
     args.schema_id = 1
     args.infinite = False
-    with patch('connector.send.Connector.send_to_kafka') as mock_send:
+    with patch(
+        'mqtt_kafka_connector.connector.Connector.send_to_kafka'
+    ) as mock_send:
         mock_send.return_value = True
         await send_test_data(data_content, conf_dict, args)
         assert mock_send.call_count == 2

@@ -28,7 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'mqtt_kafka_connector=connector.main:main',
-            'send_test_data=connector.send:send_test_data',
+            'send_test_data=emu.main:main',
         ],
     },
     install_requires=requirements,
@@ -37,8 +37,9 @@ setup(
     keywords='mqtt_kafka_connector',
     name='mqtt_kafka_connector',
     packages=find_packages(
-        include=['connector', 'connector.*'],
+        include=['src'],
     ),
+    package_dir={'': 'src'},
     extras_require={
         'develop': requirements_dev,
     },

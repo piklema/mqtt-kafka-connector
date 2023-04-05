@@ -3,8 +3,8 @@ from unittest.mock import patch
 import pytest
 from conftest import DummyResponse
 
-from connector.clients.base_http import BaseHTTPClient
-from connector.clients.schema_client import SchemaClient
+from mqtt_kafka_connector.clients.base_http import BaseHTTPClient
+from mqtt_kafka_connector.clients.schema_client import SchemaClient
 
 SCHEMA_URL = 'https://domain.com/api/v1/schemas'
 
@@ -27,7 +27,10 @@ async def test_http_client(httpx_mock):
     assert '404' in str(excinfo.value)
 
 
-@patch('connector.clients.schema_client.SCHEMA_REGISTRY_URL', SCHEMA_URL)
+@patch(
+    'mqtt_kafka_connector.clients.schema_client.SCHEMA_REGISTRY_URL',
+    SCHEMA_URL,
+)
 @patch('httpx.AsyncClient.request')
 async def test_schema_client(http_mock):
     data = {'test': 'test'}
