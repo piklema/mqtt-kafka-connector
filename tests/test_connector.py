@@ -5,7 +5,7 @@ from aiokafka import errors
 from asyncio_mqtt import Message, Topic
 from dataclasses_avroschema import AvroModel
 
-from connector.main import Connector
+from mqtt_kafka_connector.connector import Connector
 
 MQTT_TOPIC = 'customer/11111/dev/22222/v333333'
 
@@ -22,10 +22,11 @@ def test_get_kafka_producer_params(conn):
     }
 
 
-@mock.patch('connector.main.AIOKafkaProducer.send')
+@mock.patch('mqtt_kafka_connector.connector.main.AIOKafkaProducer.send')
 async def test_send_to_kafka(producer_mock, conn, caplog):
     with mock.patch(
-        'connector.main.AIOKafkaProducer.start', new_callable=mock.AsyncMock
+        'mqtt_kafka_connector.connector.main.AIOKafkaProducer.start',
+        new_callable=mock.AsyncMock,
     ):
         res = await conn.send_to_kafka(MQTT_TOPIC, value=b'some_bytes1')
         assert res is True
@@ -33,7 +34,8 @@ async def test_send_to_kafka(producer_mock, conn, caplog):
         assert caplog.records[-1].levelname == 'INFO'
 
     with mock.patch(
-        'connector.main.AIOKafkaProducer.start', new_callable=mock.AsyncMock
+        'mqtt_kafka_connector.connector.main.AIOKafkaProducer.start',
+        new_callable=mock.AsyncMock,
     ) as start_mock:
         start_mock.side_effect = errors.KafkaConnectionError()
         res = await conn.send_to_kafka('unmatched_topic', value=b'some_bytes2')
@@ -79,10 +81,16 @@ class TestMessage(AvroModel):
     test_tag: float
 
 
-@mock.patch('connector.main.AIOKafkaProducer.start', mock.AsyncMock())
-@mock.patch('connector.main.AIOKafkaProducer.stop', mock.AsyncMock())
-@mock.patch('connector.main.AIOKafkaProducer.send')
-@mock.patch('connector.main.schema_client.get_schema')
+@mock.patch(
+    'mqtt_kafka_connector.connector.main.AIOKafkaProducer.start',
+    mock.AsyncMock(),
+)
+@mock.patch(
+    'mqtt_kafka_connector.connector.main.AIOKafkaProducer.stop',
+    mock.AsyncMock(),
+)
+@mock.patch('mqtt_kafka_connector.connector.main.AIOKafkaProducer.send')
+@mock.patch('mqtt_kafka_connector.connector.main.schema_client.get_schema')
 async def test_deserialize(schema_mock, kafka_mock):
     topic = Topic(MQTT_TOPIC)
     schema_mock.return_value = TestMessage.avro_schema_to_python()

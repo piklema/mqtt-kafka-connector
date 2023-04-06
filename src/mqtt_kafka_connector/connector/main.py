@@ -12,8 +12,8 @@ from aiokafka import AIOKafkaProducer
 from asyncio_mqtt import Message
 from kafka.errors import KafkaConnectionError
 
-from connector.clients.schema_client import schema_client
-from connector.conf import (
+from mqtt_kafka_connector.clients.schema_client import schema_client
+from mqtt_kafka_connector.conf import (
     KAFKA_BOOTSTRAP_SERVERS,
     KAFKA_HEADERS_LIST,
     KAFKA_TOPIC_TEMPLATE,
@@ -28,7 +28,7 @@ from connector.conf import (
     MQTT_USER,
     TRACE_HEADER,
 )
-from connector.utils import Template
+from mqtt_kafka_connector.utils import Template
 
 logger = logging.getLogger(__name__)
 

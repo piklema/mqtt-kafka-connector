@@ -47,11 +47,11 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 
 lint/flake8: ## check style with flake8
-	flake8 connector tests
+	flake8 src tests
 lint/black: ## check style with black
-	black --check connector tests
+	black --check src tests
 lint/isort:
-	isort --check-only connector tests
+	isort --check-only src tests
 
 lint: lint/flake8 lint/black lint/isort ## check style
 
@@ -59,7 +59,7 @@ test: ## run tests quickly with the default Python
 	pytest --cov --cov-report=term-missing -ra -q
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source connector -m pytest
+	coverage run --source src -m pytest
 	coverage report -m
 	coverage html
 	$(BROWSER) htmlcov/index.html
