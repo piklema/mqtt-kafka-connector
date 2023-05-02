@@ -10,18 +10,21 @@ from mqtt_kafka_connector.emu import (
     send_test_data,
 )
 
+DEVICE_ID_1 = 11
+DEVICE_ID_2 = 12
+
 
 @pytest.fixture
 def config_content():
-    return """
+    return f"""
 # Экскаваторы
 102, 1
 103, 2
 104, 3
 106, 4
 # Самосвалы
-894, 11
-895, 12
+894, {DEVICE_ID_1}
+895, {DEVICE_ID_2}
 896, 13
 897, 14
 898, 15
@@ -72,6 +75,11 @@ async def test_send_test_data(config_content, data_content):
         await send_test_data(data_content, conf_dict, args)
         assert mock_send.call_count == 2
         assert mock_send.mock_calls[0].args[0] == 'customer_1'
+        assert mock_send.mock_calls[1].args[0] == 'customer_1'
         assert type(mock_send.mock_calls[0].args[1]) == bytes
+
         data = json.loads(mock_send.mock_calls[0].args[1])
-        assert data['messages'][0]['device_id'] == 11
+        assert data['messages'][0]['device_id'] == DEVICE_ID_1
+
+        data = json.loads(mock_send.mock_calls[1].args[1])
+        assert data['messages'][0]['device_id'] == DEVICE_ID_2
