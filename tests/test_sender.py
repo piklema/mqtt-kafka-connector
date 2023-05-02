@@ -1,7 +1,7 @@
 import types
 from io import StringIO
 from unittest.mock import patch
-
+import json
 import pytest
 
 from mqtt_kafka_connector.emu import (
@@ -72,3 +72,6 @@ async def test_send_test_data(config_content, data_content):
         await send_test_data(data_content, conf_dict, args)
         assert mock_send.call_count == 2
         assert mock_send.mock_calls[0].args[0] == 'customer_1'
+        assert type(mock_send.mock_calls[0].args[1]) == bytes
+        data = json.loads(mock_send.mock_calls[0].args[1])
+        assert data['messages'][0]['device_id'] == 11
