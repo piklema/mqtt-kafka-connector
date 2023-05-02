@@ -14,11 +14,11 @@ def test_get_kafka_producer_params(conn):
     res = conn.get_kafka_producer_params(MQTT_TOPIC)
     assert res is not None
 
-    kafka_topic, kafka_headers = res
-    assert kafka_topic == 'customer_11111'
+    kafka_topic, kafka_key, kafka_headers = res
+    assert kafka_topic == 'telemetry'
+    assert kafka_key == b'22222'
     assert set(kafka_headers) == {
         ('schema_id', b'333333'),
-        ('device_id', b'22222'),
     }
 
 
@@ -28,7 +28,9 @@ async def test_send_to_kafka(producer_mock, conn, caplog):
         'mqtt_kafka_connector.connector.main.AIOKafkaProducer.start',
         new_callable=mock.AsyncMock,
     ):
-        res = await conn.send_to_kafka(MQTT_TOPIC, value=b'some_bytes1')
+        res = await conn.send_to_kafka(
+            MQTT_TOPIC, value=b'some_bytes1', key=b'1'
+        )
         assert res is True
         assert len(caplog.records) == 1
         assert caplog.records[-1].levelname == 'INFO'
@@ -38,7 +40,9 @@ async def test_send_to_kafka(producer_mock, conn, caplog):
         new_callable=mock.AsyncMock,
     ) as start_mock:
         start_mock.side_effect = errors.KafkaConnectionError()
-        res = await conn.send_to_kafka('unmatched_topic', value=b'some_bytes2')
+        res = await conn.send_to_kafka(
+            'unmatched_topic', value=b'some_bytes2', key=b'2'
+        )
         assert res is False
         assert len(caplog.records) == 2
         assert caplog.records[-1].levelname == 'ERROR'
@@ -62,7 +66,7 @@ async def test_mqtt_handler(conn, caplog):
     res = await conn.mqtt_message_handler(msg)
     assert res is True
 
-    assert send_to_kafka_mock.call_args.args[0] == 'customer_11111'
+    assert send_to_kafka_mock.call_args.args[0] == 'telemetry'
     assert send_to_kafka_mock.call_args.args[1] == b'some_payload'
     assert 'headers' in send_to_kafka_mock.call_args.kwargs
     assert len(caplog.records) == 1
@@ -108,9 +112,10 @@ async def test_deserialize(schema_mock, kafka_mock):
     )
     await conn.mqtt_message_handler(msg)
 
-    assert kafka_mock.call_args[0][0] == 'customer_11111'
+    assert kafka_mock.call_count == 1
+    assert kafka_mock.call_args[0][0] == 'telemetry'
     assert kafka_mock.call_args[0][1] == b'{"test_tag": 11.01}'
-    headers = kafka_mock.call_args.kwargs['headers']
-    assert headers[0] == ('device_id', b'22222')
-    assert headers[1] == ('schema_id', b'333333')
-    assert headers[2][0] == 'message_uuid'
+    assert kafka_mock.call_args.kwargs['key'] == b'22222'
+    headers = dict(kafka_mock.call_args.kwargs['headers'])
+    assert headers['schema_id'] == b'333333'
+    assert 'message_uuid' in headers

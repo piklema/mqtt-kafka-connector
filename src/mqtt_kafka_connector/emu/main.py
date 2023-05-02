@@ -107,16 +107,16 @@ async def send_test_data(
 
         tt_prev_time = None
         for tt in tt_gen:
-            d = {'messages': [asdict(tt)]}
+            d = asdict(tt)
             data = json.dumps(d, cls=DateTimeEncoder).encode()
             kafka_headers = [
-                ('device_id', str(tt.device_id).encode()),
                 ('message_deserialized', b'1'),
             ]
             logger.debug('Publishing to %s', kafka_topic)
             await conn.send_to_kafka(
                 kafka_topic,
                 data,
+                key=str(tt.device_id).encode(),
                 headers=kafka_headers,
             )
 

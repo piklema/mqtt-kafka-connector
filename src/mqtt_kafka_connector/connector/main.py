@@ -16,6 +16,7 @@ from mqtt_kafka_connector.clients.schema_client import schema_client
 from mqtt_kafka_connector.conf import (
     KAFKA_BOOTSTRAP_SERVERS,
     KAFKA_HEADERS_LIST,
+    KAFKA_KEY_TEMPLATE,
     KAFKA_TOPIC_TEMPLATE,
     MESSAGE_DESERIALIZE,
     MQTT_CLIENT_ID,
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 KafkaHeadersType = List[Tuple[str, bytes]]
-TopicHeaders = Tuple[str, KafkaHeadersType]
+TopicHeaders = Tuple[str, bytes, KafkaHeadersType]
 
 
 class Connector:
@@ -51,25 +52,29 @@ class Connector:
         """Get Kafka topic & headers from MQTT topic"""
         if headers := self.tpl.to_dict(mqtt_topic):
             kafka_topic = KAFKA_TOPIC_TEMPLATE.format(**headers)
+            kafka_key = KAFKA_KEY_TEMPLATE.format(**headers).encode()
             kafka_headers = [
                 (k, v.encode('utf-8'))
                 for k, v in headers.items()
                 if k in self.header_names
             ]
-            return kafka_topic, kafka_headers
+            return kafka_topic, kafka_key, kafka_headers
         return None
 
     @staticmethod
     async def send_to_kafka(
         topic: str,
         value: bytes,
+        key: bytes,
         headers: List = None,
     ) -> bool:
         producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
         try:
             await producer.start()
-            await producer.send(topic, value, headers=headers)
-            logger.info(f'Send to kafka {topic=}, {value=}, {headers=}')
+            await producer.send(topic, value, key=key, headers=headers)
+            logger.info(
+                f'Send to kafka {topic=}, {key=}, {value=}, {headers=}'
+            )
             return True
         except KafkaConnectionError as e:
             logger.error(f'Kafka sending error {e}')
@@ -103,7 +108,7 @@ class Connector:
         )
         res = self.get_kafka_producer_params(mqtt_topic.value)
         if res:
-            kafka_topic, kafka_headers = res
+            kafka_topic, kafka_key, kafka_headers = res
 
             if self.message_deserialize:
                 schema_id = int(dict(kafka_headers)['schema_id'])
@@ -118,6 +123,7 @@ class Connector:
             res = await self.send_to_kafka(
                 kafka_topic,
                 data,
+                key=kafka_key,
                 headers=kafka_headers,
             )
             return res
