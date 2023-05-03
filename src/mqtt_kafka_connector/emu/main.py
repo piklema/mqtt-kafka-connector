@@ -103,11 +103,11 @@ async def send_test_data(
     )
     conn = Connector(message_deserialize=False)
     while True:
-        tt_gen = read_telemetry_data(csv_data_filename, conf_dict)
+        telemetry_gen = read_telemetry_data(csv_data_filename, conf_dict)
 
-        tt_prev_time = None
-        for tt in tt_gen:
-            d = asdict(tt)
+        telemetry_prev_time = None
+        for telemetry in telemetry_gen:
+            d = asdict(telemetry)
             data = json.dumps(d, cls=DateTimeEncoder).encode()
             kafka_headers = [
                 ('message_deserialized', b'1'),
@@ -116,14 +116,16 @@ async def send_test_data(
             await conn.send_to_kafka(
                 kafka_topic,
                 data,
-                key=str(tt.device_id).encode(),
+                key=str(telemetry.device_id).encode(),
                 headers=kafka_headers,
             )
 
-            period = tt.time - (tt_prev_time if tt_prev_time else tt.time)
+            period = telemetry.time - (
+                telemetry_prev_time if telemetry_prev_time else telemetry.time
+            )
             time.sleep(period.total_seconds())
 
-            tt_prev_time = tt.time
+            telemetry_prev_time = telemetry.time
 
         if args.infinite is False:
             break

@@ -1,5 +1,6 @@
 import dataclasses
 import json
+from typing import List
 from unittest import mock
 
 import pytest
@@ -77,7 +78,7 @@ class TestMessage(AvroModel):
 
 @dataclasses.dataclass
 class TestMessagePack(AvroModel):
-    messages: list[TestMessage]
+    messages: List[TestMessage]
 
 
 @mock.patch(

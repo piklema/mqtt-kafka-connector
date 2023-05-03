@@ -114,19 +114,13 @@ class Connector:
             if self.message_deserialize:
                 schema_id = int(dict(kafka_headers)['schema_id'])
                 msg_dict = await self.deserialize(message, schema_id)
-                data = json.dumps(msg_dict).encode()
+                messages = msg_dict['messages']
             else:
                 data = message.payload
+                messages = json.loads(data.decode())['messages']
 
             if TRACE_HEADER:
                 kafka_headers.append((TRACE_HEADER, message_uuid))
-
-            assert type(data) == bytes
-            try:
-                messages = json.loads(data.decode())['messages']
-            except (json.decoder.JSONDecodeError, KeyError):
-                logger.error('Message is not valid {data=}')
-                return
 
             res = []
             for message in messages:
