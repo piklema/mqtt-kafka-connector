@@ -68,10 +68,12 @@ class Connector:
         key: bytes,
         headers: List = None,
     ) -> bool:
+        assert type(value) == bytes
+        assert type(key) == bytes
         producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
         try:
             await producer.start()
-            await producer.send(topic, value, key=key, headers=headers)
+            await producer.send(topic, value=value, key=key, headers=headers)
             logger.info(
                 f'Send to kafka {topic=}, {key=}, {value=}, {headers=}'
             )
@@ -120,13 +122,24 @@ class Connector:
             if TRACE_HEADER:
                 kafka_headers.append((TRACE_HEADER, message_uuid))
 
-            res = await self.send_to_kafka(
-                kafka_topic,
-                data,
-                key=kafka_key,
-                headers=kafka_headers,
-            )
-            return res
+            assert type(data) == bytes
+            try:
+                messages = json.loads(data.decode())['messages']
+            except (json.decoder.JSONDecodeError, KeyError):
+                logger.error('Message is not valid {data=}')
+                return
+
+            res = []
+            for message in messages:
+                res.append(
+                    await self.send_to_kafka(
+                        kafka_topic,
+                        value=json.dumps(message).encode(),
+                        key=kafka_key,
+                        headers=kafka_headers,
+                    )
+                )
+            return all(res)
         else:
             logger.warning(
                 f'Error prepare kafka topic from {mqtt_topic.value=}'
