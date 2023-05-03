@@ -90,14 +90,17 @@ class TestMessagePack(AvroModel):
 )
 @mock.patch('mqtt_kafka_connector.connector.main.AIOKafkaProducer.send')
 @mock.patch('mqtt_kafka_connector.connector.main.schema_client.get_schema')
-@pytest.mark.parametrize('message_deserialize', [True, False])
-async def test_deserialize(schema_mock, kafka_mock, message_deserialize):
+@pytest.mark.parametrize(
+    'message_deserialize,message',
+    [
+        (True, TestMessagePack(**PAYLOAD).serialize()),
+        (False, json.dumps(PAYLOAD).encode()),
+    ],
+)
+async def test_deserialize(
+    schema_mock, kafka_mock, message_deserialize, message
+):
     schema_mock.return_value = TestMessagePack.avro_schema_to_python()
-
-    if message_deserialize:
-        message = TestMessagePack(**PAYLOAD).serialize()
-    else:
-        message = json.dumps(PAYLOAD).encode()
 
     msg = Message(
         topic=Topic(MQTT_TOPIC),
