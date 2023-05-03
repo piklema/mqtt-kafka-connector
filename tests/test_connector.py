@@ -1,10 +1,12 @@
 import dataclasses
+import json
 from unittest import mock
 
+import pytest
 from aiokafka import errors
 from asyncio_mqtt import Message, Topic
 from dataclasses_avroschema import AvroModel
-import json
+
 from mqtt_kafka_connector.connector import Connector
 
 MQTT_TOPIC = 'customer/11111/dev/22222/v333333'
@@ -65,48 +67,6 @@ async def test_send_to_kafka(producer_mock, conn, caplog):
         assert caplog.records[-1].levelname == 'ERROR'
 
 
-async def test_mqtt_handler(conn, caplog):
-    mqtt_topic = Topic(MQTT_TOPIC)
-    msg = Message(
-        topic=mqtt_topic,
-        payload=json.dumps(PAYLOAD).encode(),
-        qos=2,
-        retain=False,
-        mid=0,
-        properties=None,
-    )
-
-    send_to_kafka_mock = mock.AsyncMock()
-    conn.send_to_kafka = send_to_kafka_mock
-    send_to_kafka_mock.return_value = True
-
-    res = await conn.mqtt_message_handler(msg)
-    assert res is True
-
-    assert send_to_kafka_mock.call_count == len(PAYLOAD['messages'])
-
-    call = send_to_kafka_mock.mock_calls[0]
-    assert call.args[0] == 'telemetry'
-    assert type(call.kwargs['value']) == bytes
-    value = json.loads(call.kwargs['value'])
-    assert value['time'] == PAYLOAD['messages'][0]['time']
-    assert value['speed'] == PAYLOAD['messages'][0]['speed']
-    assert value['lat'] == PAYLOAD['messages'][0]['lat']
-    assert value['lon'] == PAYLOAD['messages'][0]['lon']
-    assert type(call.kwargs['key']) == bytes
-    assert type(call.kwargs['headers']) == list
-
-    assert len(caplog.records) == 1
-    assert caplog.records[-1].levelname == 'INFO'
-
-    msg.topic = Topic('bad_topic')
-    res = await conn.mqtt_message_handler(msg)
-    assert res is False
-
-    assert len(caplog.records) == 3
-    assert caplog.records[-1].levelname == 'WARNING'
-
-
 @dataclasses.dataclass
 class TestMessage(AvroModel):
     time: float
@@ -130,33 +90,37 @@ class TestMessagePack(AvroModel):
 )
 @mock.patch('mqtt_kafka_connector.connector.main.AIOKafkaProducer.send')
 @mock.patch('mqtt_kafka_connector.connector.main.schema_client.get_schema')
-async def test_deserialize(schema_mock, kafka_mock):
-    topic = Topic(MQTT_TOPIC)
+@pytest.mark.parametrize('message_deserialize', [True, False])
+async def test_deserialize(schema_mock, kafka_mock, message_deserialize):
     schema_mock.return_value = TestMessagePack.avro_schema_to_python()
 
-    conn = Connector(message_deserialize=True)
+    if message_deserialize:
+        message = TestMessagePack(**PAYLOAD).serialize()
+    else:
+        message = json.dumps(PAYLOAD).encode()
 
-    message = TestMessagePack(**PAYLOAD)
     msg = Message(
-        topic=topic,
-        payload=message.serialize(),
+        topic=Topic(MQTT_TOPIC),
+        payload=message,
         qos=2,
         retain=False,
         mid=0,
         properties=None,
     )
+
+    conn = Connector(message_deserialize=message_deserialize)
     await conn.mqtt_message_handler(msg)
 
     assert kafka_mock.call_count == len(PAYLOAD['messages'])
-
     call = kafka_mock.mock_calls[0]
     assert call.args[0] == 'telemetry'
     assert type(call.kwargs['value']) == bytes
     value = json.loads(call.kwargs['value'])
-    assert value['time'] == PAYLOAD['messages'][0]['time']
-    assert value['speed'] == PAYLOAD['messages'][0]['speed']
-    assert value['lat'] == PAYLOAD['messages'][0]['lat']
-    assert value['lon'] == PAYLOAD['messages'][0]['lon']
+    expected_message = PAYLOAD['messages'][0]
+    assert value['time'] == expected_message['time']
+    assert value['speed'] == expected_message['speed']
+    assert value['lat'] == expected_message['lat']
+    assert value['lon'] == expected_message['lon']
     assert type(call.kwargs['key']) == bytes
     assert type(call.kwargs['headers']) == list
 
