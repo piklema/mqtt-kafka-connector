@@ -98,9 +98,9 @@ class TestMessagePack(AvroModel):
     ],
 )
 async def test_deserialize(
-    schema_mock, kafka_mock, message_deserialize, message
+    get_schema_mock, kafka_send_mock, message_deserialize, message
 ):
-    schema_mock.return_value = TestMessagePack.avro_schema_to_python()
+    get_schema_mock.return_value = TestMessagePack.avro_schema_to_python()
 
     msg = Message(
         topic=Topic(MQTT_TOPIC),
@@ -114,8 +114,8 @@ async def test_deserialize(
     conn = Connector(message_deserialize=message_deserialize)
     await conn.mqtt_message_handler(msg)
 
-    assert kafka_mock.call_count == len(PAYLOAD['messages'])
-    call = kafka_mock.mock_calls[0]
+    assert kafka_send_mock.call_count == len(PAYLOAD['messages'])
+    call = kafka_send_mock.mock_calls[0]
     assert call.args[0] == 'telemetry'
     assert type(call.kwargs['value']) == bytes
     value = json.loads(call.kwargs['value'])
