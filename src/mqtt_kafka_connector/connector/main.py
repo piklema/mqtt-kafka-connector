@@ -54,12 +54,11 @@ class Connector:
             kafka_topic = KAFKA_TOPIC_TEMPLATE.format(**headers)
             kafka_key = KAFKA_KEY_TEMPLATE.format(**headers).encode()
             kafka_headers = [
-                (k, v.encode('utf-8'))
+                (k, v.encode())
                 for k, v in headers.items()
                 if k in self.header_names
             ]
             return kafka_topic, kafka_key, kafka_headers
-        return None
 
     @staticmethod
     async def send_to_kafka(
