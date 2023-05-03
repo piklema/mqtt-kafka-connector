@@ -29,7 +29,7 @@ from mqtt_kafka_connector.conf import (
     MQTT_USER,
     TRACE_HEADER,
 )
-from mqtt_kafka_connector.utils import Template
+from mqtt_kafka_connector.utils import DateTimeEncoder, Template
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,8 @@ class Connector:
 
         fp = io.BytesIO(msg.payload)
         try:
-            data = fastavro.schemaless_reader(fp, schema)
+            parsed_schema = fastavro.parse_schema(schema)
+            data = fastavro.schemaless_reader(fp, parsed_schema)
         except (IndexError, StopIteration):
             raise RuntimeError('Message is not valid')
 
@@ -127,7 +128,9 @@ class Connector:
                 res.append(
                     await self.send_to_kafka(
                         kafka_topic,
-                        value=json.dumps(message).encode(),
+                        value=json.dumps(
+                            message, cls=DateTimeEncoder
+                        ).encode(),
                         key=kafka_key,
                         headers=kafka_headers,
                     )
