@@ -35,10 +35,10 @@ class TruckTelemetry:
 
 class DateTimeEncoder(json.JSONEncoder):
     # Override the default method
-    def default(self, obj):
+    def default(self, obj) -> float:
         if isinstance(obj, (dt.date, dt.datetime)):
             aware_dt = obj.replace(tzinfo=dt.timezone.utc)
-            return aware_dt.isoformat()
+            return aware_dt.timestamp()
 
 
 def main():  # pragma: no cover
