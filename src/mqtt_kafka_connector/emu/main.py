@@ -136,21 +136,27 @@ def read_telemetry_data(
 ) -> Iterator[TruckTelemetry]:
     csv_reader = csv.DictReader(fp)
     for row in csv_reader:
-        time = dt.datetime.fromisoformat(row['time'])
-        object_id = int(row['objectid'])
-        weight_dynamic = float(row['weight_dynamic'])
-        accelerator_position = float(row['accelerator_position'])
-        height = float(row['height'])
-        lat = float(row['lat'])
-        lon = float(row['lon'])
-        speed = float(row['speed'])
-        course = float(row['course'])
+        try:
+            time_ = dt.datetime.fromisoformat(row['time'])
+            object_id = int(row['objectid'])
+            weight_dynamic = float(row['weight_dynamic'])
+            accelerator_position = float(row['accelerator_position'])
+            height = float(row['height'])
+            lat = float(row['lat'])
+            lon = float(row['lon'])
+            speed = float(row['speed'])
+            course = float(row['course'])
+        except Exception:
+            logger.error('Invalid line: %s', row)
+            continue
+
         try:
             device_id = conf_dict[object_id].device_id
         except KeyError:
             continue
+
         truck_telemetry = TruckTelemetry(
-            time=time,
+            time=time_,
             device_id=device_id,
             weight_dynamic=weight_dynamic,
             accelerator_position=accelerator_position,
