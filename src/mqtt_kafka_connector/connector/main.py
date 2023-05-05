@@ -67,8 +67,6 @@ class Connector:
         key: bytes,
         headers: List = None,
     ) -> bool:
-        assert type(value) == bytes
-        assert type(key) == bytes
         producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
         try:
             await producer.start()
