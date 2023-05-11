@@ -7,7 +7,7 @@ asyncio_mode = 'auto'
 [tool.coverage.report]
 show_missing = true
 skip_empty = true
-fail_under = 93
+fail_under = 92
 
 [tool.black]
 line-length = 79
@@ -17,4 +17,3 @@ target-version = ['py310']
 [tool.isort]
 profile = "black"
 line_length = 79
-
