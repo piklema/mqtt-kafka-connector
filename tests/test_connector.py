@@ -1,6 +1,9 @@
 import dataclasses
+import json
+from typing import List
 from unittest import mock
 
+import pytest
 from aiokafka import errors
 from asyncio_mqtt import Message, Topic
 from dataclasses_avroschema import AvroModel
@@ -8,6 +11,23 @@ from dataclasses_avroschema import AvroModel
 from mqtt_kafka_connector.connector import Connector
 
 MQTT_TOPIC = 'customer/11111/dev/22222/v333333'
+
+PAYLOAD = dict(
+    messages=[
+        dict(
+            time=1234567890,
+            speed=45.67,
+            lat=12.3456,
+            lon=23.4567,
+        ),
+        dict(
+            time=1234567891,
+            speed=45.68,
+            lat=12.3457,
+            lon=23.4568,
+        ),
+    ]
+)
 
 
 def test_get_kafka_producer_params(conn):
@@ -48,41 +68,17 @@ async def test_send_to_kafka(producer_mock, conn, caplog):
         assert caplog.records[-1].levelname == 'ERROR'
 
 
-async def test_mqtt_handler(conn, caplog):
-    topic = Topic(MQTT_TOPIC)
-    msg = Message(
-        topic=topic,
-        payload=b'some_payload',
-        qos=2,
-        retain=False,
-        mid=0,
-        properties=None,
-    )
-
-    send_to_kafka_mock = mock.AsyncMock()
-    conn.send_to_kafka = send_to_kafka_mock
-    send_to_kafka_mock.return_value = True
-
-    res = await conn.mqtt_message_handler(msg)
-    assert res is True
-
-    assert send_to_kafka_mock.call_args.args[0] == 'telemetry'
-    assert send_to_kafka_mock.call_args.args[1] == b'some_payload'
-    assert 'headers' in send_to_kafka_mock.call_args.kwargs
-    assert len(caplog.records) == 1
-    assert caplog.records[-1].levelname == 'INFO'
-
-    msg.topic = Topic('bad_topic')
-    res = await conn.mqtt_message_handler(msg)
-    assert res is False
-
-    assert len(caplog.records) == 3
-    assert caplog.records[-1].levelname == 'WARNING'
+@dataclasses.dataclass
+class TestMessage(AvroModel):
+    time: float
+    speed: float
+    lat: float
+    lon: float
 
 
 @dataclasses.dataclass
-class TestMessage(AvroModel):
-    test_tag: float
+class TestMessagePack(AvroModel):
+    messages: List[TestMessage]
 
 
 @mock.patch(
@@ -95,27 +91,43 @@ class TestMessage(AvroModel):
 )
 @mock.patch('mqtt_kafka_connector.connector.main.AIOKafkaProducer.send')
 @mock.patch('mqtt_kafka_connector.connector.main.schema_client.get_schema')
-async def test_deserialize(schema_mock, kafka_mock):
-    topic = Topic(MQTT_TOPIC)
-    schema_mock.return_value = TestMessage.avro_schema_to_python()
+@pytest.mark.parametrize(
+    'message_deserialize,message',
+    [
+        (True, TestMessagePack(**PAYLOAD).serialize()),
+        (False, json.dumps(PAYLOAD).encode()),
+    ],
+)
+async def test_deserialize(
+    get_schema_mock, kafka_send_mock, message_deserialize, message
+):
+    get_schema_mock.return_value = TestMessagePack.avro_schema_to_python()
 
-    conn = Connector(message_deserialize=True)
-
-    message = TestMessage(test_tag=11.01)
     msg = Message(
-        topic=topic,
-        payload=message.serialize(),
+        topic=Topic(MQTT_TOPIC),
+        payload=message,
         qos=2,
         retain=False,
         mid=0,
         properties=None,
     )
+
+    conn = Connector(message_deserialize=message_deserialize)
     await conn.mqtt_message_handler(msg)
 
-    assert kafka_mock.call_count == 1
-    assert kafka_mock.call_args[0][0] == 'telemetry'
-    assert kafka_mock.call_args[0][1] == b'{"test_tag": 11.01}'
-    assert kafka_mock.call_args.kwargs['key'] == b'22222'
-    headers = dict(kafka_mock.call_args.kwargs['headers'])
+    assert kafka_send_mock.call_count == len(PAYLOAD['messages'])
+    call = kafka_send_mock.mock_calls[0]
+    assert call.args[0] == 'telemetry'
+    assert type(call.kwargs['value']) == bytes
+    value = json.loads(call.kwargs['value'])
+    expected_message = PAYLOAD['messages'][0]
+    assert value['time'] == expected_message['time']
+    assert value['speed'] == expected_message['speed']
+    assert value['lat'] == expected_message['lat']
+    assert value['lon'] == expected_message['lon']
+    assert type(call.kwargs['key']) == bytes
+    assert type(call.kwargs['headers']) == list
+
+    headers = dict(call.kwargs['headers'])
     assert headers['schema_id'] == b'333333'
     assert 'message_uuid' in headers

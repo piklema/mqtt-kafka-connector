@@ -29,7 +29,7 @@ from mqtt_kafka_connector.conf import (
     MQTT_USER,
     TRACE_HEADER,
 )
-from mqtt_kafka_connector.utils import Template
+from mqtt_kafka_connector.utils import DateTimeEncoder, Template
 
 logger = logging.getLogger(__name__)
 
@@ -54,12 +54,11 @@ class Connector:
             kafka_topic = KAFKA_TOPIC_TEMPLATE.format(**headers)
             kafka_key = KAFKA_KEY_TEMPLATE.format(**headers).encode()
             kafka_headers = [
-                (k, v.encode('utf-8'))
+                (k, v.encode())
                 for k, v in headers.items()
                 if k in self.header_names
             ]
             return kafka_topic, kafka_key, kafka_headers
-        return None
 
     @staticmethod
     async def send_to_kafka(
@@ -71,7 +70,7 @@ class Connector:
         producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
         try:
             await producer.start()
-            await producer.send(topic, value, key=key, headers=headers)
+            await producer.send(topic, value=value, key=key, headers=headers)
             logger.info(
                 f'Send to kafka {topic=}, {key=}, {value=}, {headers=}'
             )
@@ -90,7 +89,8 @@ class Connector:
 
         fp = io.BytesIO(msg.payload)
         try:
-            data = fastavro.schemaless_reader(fp, schema)
+            parsed_schema = fastavro.parse_schema(schema)
+            data = fastavro.schemaless_reader(fp, parsed_schema)
         except (IndexError, StopIteration):
             raise RuntimeError('Message is not valid')
 
@@ -113,20 +113,27 @@ class Connector:
             if self.message_deserialize:
                 schema_id = int(dict(kafka_headers)['schema_id'])
                 msg_dict = await self.deserialize(message, schema_id)
-                data = json.dumps(msg_dict).encode()
+                messages = msg_dict['messages']
             else:
                 data = message.payload
+                messages = json.loads(data.decode())['messages']
 
             if TRACE_HEADER:
                 kafka_headers.append((TRACE_HEADER, message_uuid))
 
-            res = await self.send_to_kafka(
-                kafka_topic,
-                data,
-                key=kafka_key,
-                headers=kafka_headers,
-            )
-            return res
+            res = []
+            for message in messages:
+                res.append(
+                    await self.send_to_kafka(
+                        kafka_topic,
+                        value=json.dumps(
+                            message, cls=DateTimeEncoder
+                        ).encode(),
+                        key=kafka_key,
+                        headers=kafka_headers,
+                    )
+                )
+            return all(res)
         else:
             logger.warning(
                 f'Error prepare kafka topic from {mqtt_topic.value=}'

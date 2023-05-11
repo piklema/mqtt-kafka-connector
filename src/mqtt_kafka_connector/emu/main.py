@@ -35,10 +35,10 @@ class TruckTelemetry:
 
 class DateTimeEncoder(json.JSONEncoder):
     # Override the default method
-    def default(self, obj):
+    def default(self, obj) -> float:
         if isinstance(obj, (dt.date, dt.datetime)):
             aware_dt = obj.replace(tzinfo=dt.timezone.utc)
-            return aware_dt.isoformat()
+            return aware_dt.timestamp()
 
 
 def main():  # pragma: no cover
@@ -103,11 +103,11 @@ async def send_test_data(
     )
     conn = Connector(message_deserialize=False)
     while True:
-        tt_gen = read_telemetry_data(csv_data_filename, conf_dict)
+        telemetry_gen = read_telemetry_data(csv_data_filename, conf_dict)
 
-        tt_prev_time = None
-        for tt in tt_gen:
-            d = asdict(tt)
+        telemetry_prev_time = None
+        for telemetry in telemetry_gen:
+            d = asdict(telemetry)
             data = json.dumps(d, cls=DateTimeEncoder).encode()
             kafka_headers = [
                 ('message_deserialized', b'1'),
@@ -116,14 +116,16 @@ async def send_test_data(
             await conn.send_to_kafka(
                 kafka_topic,
                 data,
-                key=str(tt.device_id).encode(),
+                key=str(telemetry.device_id).encode(),
                 headers=kafka_headers,
             )
 
-            period = tt.time - (tt_prev_time if tt_prev_time else tt.time)
+            period = telemetry.time - (
+                telemetry_prev_time if telemetry_prev_time else telemetry.time
+            )
             time.sleep(period.total_seconds())
 
-            tt_prev_time = tt.time
+            telemetry_prev_time = telemetry.time
 
         if args.infinite is False:
             break
@@ -134,21 +136,27 @@ def read_telemetry_data(
 ) -> Iterator[TruckTelemetry]:
     csv_reader = csv.DictReader(fp)
     for row in csv_reader:
-        time = dt.datetime.fromisoformat(row['time'])
-        object_id = int(row['objectid'])
-        weight_dynamic = float(row['weight_dynamic'])
-        accelerator_position = float(row['accelerator_position'])
-        height = float(row['height'])
-        lat = float(row['lat'])
-        lon = float(row['lon'])
-        speed = float(row['speed'])
-        course = float(row['course'])
+        try:
+            time_ = dt.datetime.fromisoformat(row['time'])
+            object_id = int(row['objectid'])
+            weight_dynamic = float(row['weight_dynamic'])
+            accelerator_position = float(row['accelerator_position'])
+            height = float(row['height'])
+            lat = float(row['lat'])
+            lon = float(row['lon'])
+            speed = float(row['speed'])
+            course = float(row['course'])
+        except Exception:
+            logger.error('Invalid line: %s', row)
+            continue
+
         try:
             device_id = conf_dict[object_id].device_id
         except KeyError:
             continue
+
         truck_telemetry = TruckTelemetry(
-            time=time,
+            time=time_,
             device_id=device_id,
             weight_dynamic=weight_dynamic,
             accelerator_position=accelerator_position,
