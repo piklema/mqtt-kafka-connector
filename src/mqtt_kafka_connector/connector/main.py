@@ -111,6 +111,7 @@ class Connector:
             kafka_topic, kafka_key, kafka_headers = res
 
             if self.message_deserialize:
+                kafka_headers.append(('message_deserialized', b'1'))
                 schema_id = int(dict(kafka_headers)['schema_id'])
                 msg_dict = await self.deserialize(message, schema_id)
                 messages = msg_dict['messages']

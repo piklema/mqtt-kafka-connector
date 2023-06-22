@@ -130,4 +130,6 @@ async def test_deserialize(
 
     headers = dict(call.kwargs['headers'])
     assert headers['schema_id'] == b'333333'
+    if message_deserialize:
+        assert headers['message_deserialized'] == b'1'
     assert 'message_uuid' in headers
