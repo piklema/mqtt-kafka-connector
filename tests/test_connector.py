@@ -52,8 +52,8 @@ async def test_send_to_kafka(producer_mock, conn, caplog):
             MQTT_TOPIC, value=b'some_bytes1', key=b'1'
         )
         assert res is True
-        assert len(caplog.records) == 1
-        assert caplog.records[-1].levelname == 'INFO'
+        assert len(caplog.records) == 2
+        assert caplog.records[0].levelname == 'INFO'
 
     with mock.patch(
         'mqtt_kafka_connector.connector.main.AIOKafkaProducer.start',
@@ -64,8 +64,8 @@ async def test_send_to_kafka(producer_mock, conn, caplog):
             'unmatched_topic', value=b'some_bytes2', key=b'2'
         )
         assert res is False
-        assert len(caplog.records) == 2
-        assert caplog.records[-1].levelname == 'ERROR'
+        assert len(caplog.records) == 4
+        assert caplog.records[0].levelname == 'INFO'
 
 
 @dataclasses.dataclass
@@ -130,4 +130,6 @@ async def test_deserialize(
 
     headers = dict(call.kwargs['headers'])
     assert headers['schema_id'] == b'333333'
+    if message_deserialize:
+        assert headers['message_deserialized'] == b'1'
     assert 'message_uuid' in headers

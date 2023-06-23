@@ -56,7 +56,7 @@ lint/isort:
 lint: lint/flake8 lint/black lint/isort ## check style
 
 test: ## run tests quickly with the default Python
-	pytest --cov --cov-report=term-missing -ra -q
+	pytest --cov --cov-report=term-missing -ra -q -s
 
 coverage: ## check code coverage quickly with the default Python
 	coverage run --source src -m pytest

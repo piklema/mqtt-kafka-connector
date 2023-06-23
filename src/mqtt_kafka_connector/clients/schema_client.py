@@ -1,3 +1,5 @@
+import logging
+
 from async_lru import alru_cache
 
 from mqtt_kafka_connector.clients.base_http import BaseHTTPClient
@@ -5,6 +7,8 @@ from mqtt_kafka_connector.conf import (
     SCHEMA_REGISTRY_REQUEST_HEADERS,
     SCHEMA_REGISTRY_URL,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SchemaClient(BaseHTTPClient):
@@ -23,6 +27,5 @@ headers = (
     if SCHEMA_REGISTRY_REQUEST_HEADERS
     else None
 )
-
 
 schema_client = SchemaClient(headers=headers)
