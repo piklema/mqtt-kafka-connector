@@ -27,6 +27,6 @@ headers = (
     if SCHEMA_REGISTRY_REQUEST_HEADERS
     else None
 )
-print('schema_client')
+
 logger.info('schema_client')
 schema_client = SchemaClient(headers=headers)
