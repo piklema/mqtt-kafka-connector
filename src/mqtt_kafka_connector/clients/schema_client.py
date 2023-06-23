@@ -28,5 +28,4 @@ headers = (
     else None
 )
 
-logger.info('schema_client')
 schema_client = SchemaClient(headers=headers)
