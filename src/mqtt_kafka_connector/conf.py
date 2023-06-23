@@ -71,5 +71,3 @@ LOGGING = {
         },
     },
 }
-
-logging.config.dictConfig(LOGGING)
