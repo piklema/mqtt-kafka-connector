@@ -1,5 +1,7 @@
-from async_lru import alru_cache
 import logging
+
+from async_lru import alru_cache
+
 from mqtt_kafka_connector.clients.base_http import BaseHTTPClient
 from mqtt_kafka_connector.conf import (
     SCHEMA_REGISTRY_REQUEST_HEADERS,
