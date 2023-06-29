@@ -2,9 +2,7 @@ import logging.config
 import os
 import uuid
 
-import sentry_sdk
 from dotenv import load_dotenv
-from sentry_sdk.integrations.logging import LoggingIntegration
 
 load_dotenv()
 
@@ -29,6 +27,9 @@ MESSAGE_DESERIALIZE = SCHEMA_REGISTRY_URL and SCHEMA_REGISTRY_REQUEST_HEADERS
 SENTRY_DSN = os.getenv('SENTRY_DSN')
 
 if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.logging import LoggingIntegration
+
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[
@@ -38,6 +39,7 @@ if SENTRY_DSN:
         send_default_pii=True,
         attach_stacktrace=False,
         max_breadcrumbs=20,
+        release='mqtt-kafka-connector@' + os.getenv('RELEASE_VERSION', ''),
     )
 
 
