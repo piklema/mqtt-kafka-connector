@@ -156,7 +156,10 @@ class Connector:
                     async with client.messages() as messages:
                         await client.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=2)
                         async for message in messages:
-                            await self.mqtt_message_handler(message)
+                            try:
+                                await self.mqtt_message_handler(message)
+                            except RuntimeError as e:
+                                logger.error(f'Runtime error: {e}')
 
             except aiomqtt.MqttError as error:
                 logger.warning(
