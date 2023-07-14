@@ -4,7 +4,6 @@ import csv
 import datetime as dt
 import json
 import logging
-import time
 from dataclasses import asdict, dataclass
 from typing import Dict, Iterator, TextIO
 
@@ -123,7 +122,7 @@ async def send_test_data(
             period = telemetry.time - (
                 telemetry_prev_time if telemetry_prev_time else telemetry.time
             )
-            time.sleep(period.total_seconds())
+            # time.sleep(period.total_seconds())
 
             telemetry_prev_time = telemetry.time
 

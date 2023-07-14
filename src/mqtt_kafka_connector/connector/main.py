@@ -85,14 +85,16 @@ class Connector:
         schema = await self.schema_client.get_schema(schema_id)
 
         if not schema:
-            raise RuntimeError('Schema not found')
+            logger.error(f'Schema {schema_id=} not found! Skipped.')
+            return
 
         fp = io.BytesIO(msg.payload)
         try:
             parsed_schema = fastavro.parse_schema(schema)
             data = fastavro.schemaless_reader(fp, parsed_schema)
         except (IndexError, StopIteration):
-            raise RuntimeError('Message is not valid')
+            logger.error('Message is not valid! Skipped.')
+            return
 
         logger.info(f"Message deserialized: {data=}")
 
@@ -113,7 +115,7 @@ class Connector:
             if self.message_deserialize:
                 schema_id = int(dict(kafka_headers)['schema_id'])
                 msg_dict = await self.deserialize(message, schema_id)
-                messages = msg_dict['messages']
+                messages = msg_dict['messages'] if msg_dict else []
             else:
                 data = message.payload
                 messages = json.loads(data.decode())['messages']
