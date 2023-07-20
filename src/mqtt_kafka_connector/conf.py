@@ -2,9 +2,7 @@ import logging.config
 import os
 import uuid
 
-import sentry_sdk
 from dotenv import load_dotenv
-from sentry_sdk.integrations.logging import LoggingIntegration
 
 load_dotenv()
 
@@ -31,6 +29,9 @@ MESSAGE_DESERIALIZE = bool(
 SENTRY_DSN = os.getenv('SENTRY_DSN')
 
 if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.logging import LoggingIntegration
+
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[
@@ -40,10 +41,37 @@ if SENTRY_DSN:
         send_default_pii=True,
         attach_stacktrace=False,
         max_breadcrumbs=20,
+        release='mqtt-kafka-connector@' + os.getenv('RELEASE_VERSION', ''),
     )
 
-fmt = (
-    '%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).'
-    '%(funcName)s:%(lineno)d - %(message)s'
-)
-logging.basicConfig(level=logging.INFO, format=fmt)
+
+LOGGING = {
+    'version': 1,
+    'root': {
+        'level': 'DEBUG',
+        'handlers': ['console'],
+    },
+    'formatters': {
+        'verbose': {
+            'format': '%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s:%(lineno)d - %(message)s'  # noqa
+        },
+    },
+    'handlers': {
+        'null': {
+            'level': 'DEBUG',
+            'class': 'logging.NullHandler',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}

@@ -113,6 +113,7 @@ class Connector:
             kafka_topic, kafka_key, kafka_headers = res
 
             if self.message_deserialize:
+                kafka_headers.append(('message_deserialized', b'1'))
                 schema_id = int(dict(kafka_headers)['schema_id'])
                 msg_dict = await self.deserialize(message, schema_id)
                 messages = msg_dict['messages'] if msg_dict else []
@@ -157,7 +158,10 @@ class Connector:
                     async with client.messages() as messages:
                         await client.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=2)
                         async for message in messages:
-                            await self.mqtt_message_handler(message)
+                            try:
+                                await self.mqtt_message_handler(message)
+                            except RuntimeError as e:
+                                logger.error(f'Runtime error: {e}')
 
             except aiomqtt.MqttError as error:
                 logger.warning(
