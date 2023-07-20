@@ -116,7 +116,7 @@ class Connector:
                 kafka_headers.append(('message_deserialized', b'1'))
                 schema_id = int(dict(kafka_headers)['schema_id'])
                 msg_dict = await self.deserialize(message, schema_id)
-                messages = msg_dict['messages'] if msg_dict else []
+                messages = msg_dict['messages']
             else:
                 data = message.payload
                 messages = json.loads(data.decode())['messages']
