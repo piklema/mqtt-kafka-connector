@@ -1,7 +1,9 @@
 import logging.config
 import os
 import uuid
+from logging import Filter
 
+from context_vars import MESSAGE_UUID, message_uuid_var
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,6 +26,9 @@ SCHEMA_REGISTRY_URL = os.getenv('SCHEMA_REGISTRY_URL')
 SCHEMA_REGISTRY_REQUEST_HEADERS = os.getenv('SCHEMA_REGISTRY_REQUEST_HEADERS')
 MESSAGE_DESERIALIZE = SCHEMA_REGISTRY_URL and SCHEMA_REGISTRY_REQUEST_HEADERS
 
+SERVICE_NAME = 'piklema-mqtt-kafka-connector'
+ENVIRONMENT = os.getenv('ENVIRONMENT', '')
+
 SENTRY_DSN = os.getenv('SENTRY_DSN')
 
 if SENTRY_DSN:
@@ -40,7 +45,19 @@ if SENTRY_DSN:
         attach_stacktrace=False,
         max_breadcrumbs=20,
         release='mqtt-kafka-connector@' + os.getenv('RELEASE_VERSION', ''),
+        environment=ENVIRONMENT,
     )
+
+
+class MessageParamsFilter(Filter):
+    def filter(self, record):
+        message_uuid = message_uuid_var.get()
+        record.message_uuid = message_uuid
+        record.service_name = SERVICE_NAME
+        record.environment = ENVIRONMENT
+        sentry_sdk.set_tag(MESSAGE_UUID, message_uuid)
+
+        return True
 
 
 LOGGING = {
@@ -70,6 +87,11 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': False,
+        },
+    },
+    'filters': {
+        'message_params': {
+            '()': MessageParamsFilter,
         },
     },
 }

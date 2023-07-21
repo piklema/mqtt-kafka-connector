@@ -1,4 +1,6 @@
-.idea
+# IDE
+/.idea
+.vscode/*
 
 ### Python template
 # Byte-compiled / optimized / DLL files
