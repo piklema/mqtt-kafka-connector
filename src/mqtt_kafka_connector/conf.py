@@ -3,8 +3,9 @@ import os
 import uuid
 from logging import Filter
 
-from context_vars import MESSAGE_UUID, message_uuid_var
 from dotenv import load_dotenv
+
+from mqtt_kafka_connector.context_vars import MESSAGE_UUID, message_uuid_var
 
 load_dotenv()
 
