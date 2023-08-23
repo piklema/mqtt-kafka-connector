@@ -10,6 +10,7 @@ from typing import Dict, Iterator, TextIO
 
 from mqtt_kafka_connector import conf
 from mqtt_kafka_connector.connector import Connector
+from mqtt_kafka_connector.utils import DateTimeEncoder
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +32,6 @@ class TruckTelemetry:
     lon: float
     speed: float
     course: float
-
-
-class DateTimeEncoder(json.JSONEncoder):
-    # Override the default method
-    def default(self, obj) -> float:
-        if isinstance(obj, (dt.date, dt.datetime)):
-            aware_dt = obj.replace(tzinfo=dt.timezone.utc)
-            return aware_dt.timestamp()
 
 
 def main():  # pragma: no cover
