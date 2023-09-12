@@ -13,7 +13,7 @@ class BaseHTTPClient:
         self.headers = headers
 
     async def request(self, url: str, method: str, **kwargs) -> dict:
-        logger.error(f'HTTP request: {method=}, {url=}, {kwargs=}')
+        logger.info(f'HTTP request: {method=}, {url=}, {kwargs=}')
         async with httpx.AsyncClient(
             headers=self.headers, timeout=1
         ) as client:
@@ -23,7 +23,7 @@ class BaseHTTPClient:
                 )
                 resp_json = resp.json()
 
-                logger.error(f'HTTP response: {resp_json}')
+                logger.info(f'HTTP response: {resp_json}')
 
                 if resp.status_code not in [
                     httpx.codes.OK,
