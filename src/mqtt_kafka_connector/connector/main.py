@@ -17,7 +17,6 @@ from mqtt_kafka_connector.conf import (
     KAFKA_BOOTSTRAP_SERVERS,
     KAFKA_HEADERS_LIST,
     KAFKA_KEY_TEMPLATE,
-    KAFKA_TOPIC_TEMPLATE,
     MESSAGE_DESERIALIZE,
     MQTT_CLIENT_ID,
     MQTT_HOST,
@@ -27,6 +26,7 @@ from mqtt_kafka_connector.conf import (
     MQTT_TOPIC_SOURCE_MATCH,
     MQTT_TOPIC_SOURCE_TEMPLATE,
     MQTT_USER,
+    TELEMETRY_KAFKA_TOPIC,
     TRACE_HEADER,
 )
 from mqtt_kafka_connector.utils import DateTimeEncoder, Template
@@ -51,7 +51,7 @@ class Connector:
     ) -> Optional[TopicHeaders]:
         """Get Kafka topic & headers from MQTT topic"""
         if headers := self.tpl.to_dict(mqtt_topic):
-            kafka_topic = KAFKA_TOPIC_TEMPLATE.format(**headers)
+            kafka_topic = TELEMETRY_KAFKA_TOPIC.format(**headers)
             kafka_key = KAFKA_KEY_TEMPLATE.format(**headers).encode()
             kafka_headers = [
                 (k, v.encode())
