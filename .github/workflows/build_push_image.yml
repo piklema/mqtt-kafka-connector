@@ -37,3 +37,13 @@ jobs:
         registry: docker.io
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
+
+
+    - name: Build & push Docker image Piklema Repository
+      uses: mr-smithers-excellent/docker-build-push@v3
+      with:
+        image: piklema/mqtt-kafka-connector
+        tag: ${{ env.RELEASE_VERSION }}
+        registry: docker-repository.piklema.com
+        username: ${{ secrets.PIKLEMA_DOCKER_USERNAME }}
+        password: ${{ secrets.PIKLEMA_DOCKER_PASSWORD }}
