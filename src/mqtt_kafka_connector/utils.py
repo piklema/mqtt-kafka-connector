@@ -1,7 +1,6 @@
 import datetime
 import re
 from json import JSONEncoder
-from typing import Dict, Optional
 
 
 class DateTimeEncoder(JSONEncoder):
@@ -25,8 +24,8 @@ class Template:
         """Заменить шаблоны вида {маска} на `wildcard`"""
         return re.sub(self.MASK_REGEXP, wildcard, self.src_tpl)
 
-    def to_dict(self, topic: str) -> Optional[Dict[str, str]]:
-        """Получить из шаблона словарь с значениями из строки"""
+    def to_dict(self, topic: str) -> dict:
+        """Получить из шаблона словарь со значениями из строки"""
         regex_str = self.tpl_to_regex(self.src_tpl)
         matches = re.match(regex_str, topic)
-        return matches.groupdict() if matches else None
+        return matches.groupdict() if matches else {}

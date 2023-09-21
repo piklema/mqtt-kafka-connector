@@ -3,7 +3,6 @@ import io
 import json
 import logging
 import sys
-import uuid
 from typing import List, Optional, Tuple
 
 import asyncio_mqtt as aiomqtt
@@ -29,6 +28,7 @@ from mqtt_kafka_connector.conf import (
     TELEMETRY_KAFKA_TOPIC,
     TRACE_HEADER,
 )
+from mqtt_kafka_connector.context_vars import message_uuid_var, setup_vars
 from mqtt_kafka_connector.utils import DateTimeEncoder, Template
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ TopicHeaders = Tuple[str, bytes, KafkaHeadersType]
 
 class Connector:
     def __init__(self, message_deserialize: bool = False):
-        self.tpl = Template(MQTT_TOPIC_SOURCE_TEMPLATE)
+        self.mqtt_topic_params_tmpl = Template(MQTT_TOPIC_SOURCE_TEMPLATE)
         self.header_names = KAFKA_HEADERS_LIST.split(',')
         self.message_deserialize = message_deserialize
         self.schema_client = schema_client
@@ -50,12 +50,14 @@ class Connector:
         mqtt_topic: str,
     ) -> Optional[TopicHeaders]:
         """Get Kafka topic & headers from MQTT topic"""
-        if headers := self.tpl.to_dict(mqtt_topic):
-            kafka_topic = TELEMETRY_KAFKA_TOPIC.format(**headers)
-            kafka_key = KAFKA_KEY_TEMPLATE.format(**headers).encode()
+        if mqtt_topic_params := self.mqtt_topic_params_tmpl.to_dict(
+            mqtt_topic
+        ):
+            kafka_topic = TELEMETRY_KAFKA_TOPIC.format(**mqtt_topic_params)
+            kafka_key = KAFKA_KEY_TEMPLATE.format(**mqtt_topic_params).encode()
             kafka_headers = [
                 (k, v.encode())
-                for k, v in headers.items()
+                for k, v in mqtt_topic_params.items()
                 if k in self.header_names
             ]
             return kafka_topic, kafka_key, kafka_headers
@@ -99,12 +101,10 @@ class Connector:
         return data
 
     async def mqtt_message_handler(self, message: Message) -> bool:
-        message_uuid = uuid.uuid4().hex.encode()
         mqtt_topic = message.topic
         logger.info(
             f'Message received from {mqtt_topic.value=} '
             f'{message.payload=} {message.qos=}',
-            extra={TRACE_HEADER: message_uuid},
         )
         res = self.get_kafka_producer_params(mqtt_topic.value)
         if res:
@@ -120,7 +120,7 @@ class Connector:
                 messages = json.loads(data.decode())['messages']
 
             if TRACE_HEADER:
-                kafka_headers.append((TRACE_HEADER, message_uuid))
+                kafka_headers.append((TRACE_HEADER, message_uuid_var.get()))
 
             res = []
             for message in messages:
@@ -141,7 +141,7 @@ class Connector:
             )
             return False
 
-    async def run(self):
+    async def run(self, single_run: bool = False):
         logger.info('MQTT Kafka connector is running')
         while True:
             try:
@@ -157,9 +157,18 @@ class Connector:
                         await client.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=2)
                         async for message in messages:
                             try:
+                                mqtt_params = (
+                                    self.mqtt_topic_params_tmpl.to_dict(
+                                        message.topic.value
+                                    )
+                                )
+                                setup_vars(mqtt_params.get('device_id'))
                                 await self.mqtt_message_handler(message)
                             except RuntimeError as e:
                                 logger.error(f'Runtime error: {e}')
+
+                if single_run:
+                    return
 
             except aiomqtt.MqttError as error:
                 logger.warning(

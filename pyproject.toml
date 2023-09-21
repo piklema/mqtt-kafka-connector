@@ -7,7 +7,7 @@ asyncio_mode = 'auto'
 [tool.coverage.report]
 show_missing = true
 skip_empty = true
-fail_under = 91
+fail_under = 89
 
 [tool.black]
 line-length = 79

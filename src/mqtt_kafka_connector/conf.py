@@ -1,16 +1,22 @@
 import logging.config
 import os
 import uuid
+from logging import Filter
 
+import sentry_sdk
 from dotenv import load_dotenv
+from sentry_sdk.integrations.logging import LoggingIntegration
+
+from mqtt_kafka_connector.context_vars import device_id_var, message_uuid_var
 
 load_dotenv()
 
+LOGLEVEL = os.getenv('LOGLEVEL', 'INFO')
 MQTT_HOST = os.getenv('MQTT_HOST')
 MQTT_PORT = int(os.getenv('MQTT_PORT'))
 MQTT_USER = os.getenv('MQTT_USER')
 MQTT_PASSWORD = os.getenv('MQTT_PASSWORD')
-MQTT_RECONNECT_INTERVAL_SEC = int(os.getenv('MQTT_RECONNECT_INTERVAL_SEC'))
+MQTT_RECONNECT_INTERVAL_SEC = int(os.getenv('MQTT_RECONNECT_INTERVAL_SEC', 3))
 MQTT_CLIENT_ID = os.getenv('MQTT_CLIENT_ID') or uuid.uuid4().hex
 MQTT_TOPIC_SOURCE_MATCH = os.getenv('MQTT_TOPIC_SOURCE_MATCH')
 MQTT_TOPIC_SOURCE_TEMPLATE = os.getenv('MQTT_TOPIC_SOURCE_TEMPLATE')
@@ -24,12 +30,12 @@ SCHEMA_REGISTRY_URL = os.getenv('SCHEMA_REGISTRY_URL')
 SCHEMA_REGISTRY_REQUEST_HEADERS = os.getenv('SCHEMA_REGISTRY_REQUEST_HEADERS')
 MESSAGE_DESERIALIZE = SCHEMA_REGISTRY_URL and SCHEMA_REGISTRY_REQUEST_HEADERS
 
+SERVICE_NAME = 'piklema-mqtt-kafka-connector'
+ENVIRONMENT = os.getenv('ENVIRONMENT', '')
+
 SENTRY_DSN = os.getenv('SENTRY_DSN')
 
 if SENTRY_DSN:
-    import sentry_sdk
-    from sentry_sdk.integrations.logging import LoggingIntegration
-
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[
@@ -40,13 +46,24 @@ if SENTRY_DSN:
         attach_stacktrace=False,
         max_breadcrumbs=20,
         release='mqtt-kafka-connector@' + os.getenv('RELEASE_VERSION', ''),
+        environment=ENVIRONMENT,
     )
+
+
+class MessageParamsFilter(Filter):
+    def filter(self, record):
+        message_uuid = message_uuid_var.get()
+        record.device_id = device_id_var.get()
+        record.message_uuid = message_uuid
+        record.service_name = SERVICE_NAME
+        record.environment = ENVIRONMENT
+        return True
 
 
 LOGGING = {
     'version': 1,
     'root': {
-        'level': 'DEBUG',
+        'level': LOGLEVEL,
         'handlers': ['console'],
     },
     'formatters': {
@@ -56,11 +73,11 @@ LOGGING = {
     },
     'handlers': {
         'null': {
-            'level': 'DEBUG',
+            'level': LOGLEVEL,
             'class': 'logging.NullHandler',
         },
         'console': {
-            'level': 'DEBUG',
+            'level': LOGLEVEL,
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
@@ -68,8 +85,13 @@ LOGGING = {
     'loggers': {
         '': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': LOGLEVEL,
             'propagate': False,
+        },
+    },
+    'filters': {
+        'message_params': {
+            '()': MessageParamsFilter,
         },
     },
 }
