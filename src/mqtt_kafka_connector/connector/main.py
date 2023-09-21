@@ -141,7 +141,7 @@ class Connector:
             )
             return False
 
-    async def run(self):
+    async def run(self, single_run: bool = False):
         logger.info('MQTT Kafka connector is running')
         while True:
             try:
@@ -166,6 +166,9 @@ class Connector:
                                 await self.mqtt_message_handler(message)
                             except RuntimeError as e:
                                 logger.error(f'Runtime error: {e}')
+
+                if single_run:
+                    return
 
             except aiomqtt.MqttError as error:
                 logger.warning(

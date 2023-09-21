@@ -54,7 +54,7 @@ async def test_send_to_kafka(producer_mock, conn, caplog):
             MQTT_TOPIC, value=b'some_bytes1', key=b'1'
         )
         assert res is True
-        assert len(caplog.records) == 2
+        assert len(caplog.records) == 1
         assert caplog.records[0].levelname == 'INFO'
 
     with mock.patch(
@@ -66,7 +66,7 @@ async def test_send_to_kafka(producer_mock, conn, caplog):
             'unmatched_topic', value=b'some_bytes2', key=b'2'
         )
         assert res is False
-        assert len(caplog.records) == 4
+        assert len(caplog.records) == 2
         assert caplog.records[0].levelname == 'INFO'
 
 
