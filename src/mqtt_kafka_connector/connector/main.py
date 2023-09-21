@@ -120,7 +120,9 @@ class Connector:
                 messages = json.loads(data.decode())['messages']
 
             if TRACE_HEADER:
-                kafka_headers.append((TRACE_HEADER, message_uuid_var.get()))
+                kafka_headers.append(
+                    (TRACE_HEADER, message_uuid_var.get().encode())
+                )
 
             res = []
             for message in messages:
