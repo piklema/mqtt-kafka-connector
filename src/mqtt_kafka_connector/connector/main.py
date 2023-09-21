@@ -120,7 +120,9 @@ class Connector:
                 messages = json.loads(data.decode())['messages']
 
             if TRACE_HEADER:
-                kafka_headers.append((TRACE_HEADER, message_uuid_var.get()))
+                kafka_headers.append(
+                    (TRACE_HEADER, message_uuid_var.get().encode())
+                )
 
             res = []
             for message in messages:
@@ -141,7 +143,7 @@ class Connector:
             )
             return False
 
-    async def run(self, single_run: bool = False):
+    async def run(self):
         logger.info('MQTT Kafka connector is running')
         while True:
             try:
@@ -166,9 +168,6 @@ class Connector:
                                 await self.mqtt_message_handler(message)
                             except RuntimeError as e:
                                 logger.error(f'Runtime error: {e}')
-
-                if single_run:
-                    return
 
             except aiomqtt.MqttError as error:
                 logger.warning(
