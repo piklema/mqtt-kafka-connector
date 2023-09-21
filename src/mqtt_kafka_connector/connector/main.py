@@ -28,11 +28,8 @@ from mqtt_kafka_connector.conf import (
     TELEMETRY_KAFKA_TOPIC,
     TRACE_HEADER,
 )
+from mqtt_kafka_connector.context_vars import message_uuid_var, setup_vars
 from mqtt_kafka_connector.utils import DateTimeEncoder, Template
-from mqtt_kafka_connector.context_vars import (
-    message_uuid_var,
-    setup_vars,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +50,7 @@ class Connector:
         mqtt_topic: str,
     ) -> Optional[TopicHeaders]:
         """Get Kafka topic & headers from MQTT topic"""
-        if headers := self.tpl.to_dict(mqtt_topic):
+        if headers := self.mqtt_topic_params_tmpl.to_dict(mqtt_topic):
             kafka_topic = TELEMETRY_KAFKA_TOPIC.format(**headers)
             kafka_key = KAFKA_KEY_TEMPLATE.format(**headers).encode()
             kafka_headers = [

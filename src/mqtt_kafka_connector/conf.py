@@ -7,10 +7,7 @@ import sentry_sdk
 from dotenv import load_dotenv
 from sentry_sdk.integrations.logging import LoggingIntegration
 
-from mqtt_kafka_connector.context_vars import (
-    message_uuid_var,
-    device_id_var,
-)
+from mqtt_kafka_connector.context_vars import device_id_var, message_uuid_var
 
 load_dotenv()
 

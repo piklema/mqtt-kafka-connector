@@ -1,7 +1,6 @@
 import datetime
 import re
 from json import JSONEncoder
-from typing import Dict, Optional
 
 
 class DateTimeEncoder(JSONEncoder):
