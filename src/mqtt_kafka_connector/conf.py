@@ -3,17 +3,23 @@ import os
 import uuid
 from logging import Filter
 
+import sentry_sdk
 from dotenv import load_dotenv
+from sentry_sdk.integrations.logging import LoggingIntegration
 
-from mqtt_kafka_connector.context_vars import MESSAGE_UUID, message_uuid_var
+from mqtt_kafka_connector.context_vars import (
+    message_uuid_var,
+    device_id_var,
+)
 
 load_dotenv()
 
+LOGLEVEL = os.getenv('LOGLEVEL', 'INFO')
 MQTT_HOST = os.getenv('MQTT_HOST')
 MQTT_PORT = int(os.getenv('MQTT_PORT'))
 MQTT_USER = os.getenv('MQTT_USER')
 MQTT_PASSWORD = os.getenv('MQTT_PASSWORD')
-MQTT_RECONNECT_INTERVAL_SEC = int(os.getenv('MQTT_RECONNECT_INTERVAL_SEC'))
+MQTT_RECONNECT_INTERVAL_SEC = int(os.getenv('MQTT_RECONNECT_INTERVAL_SEC', 3))
 MQTT_CLIENT_ID = os.getenv('MQTT_CLIENT_ID') or uuid.uuid4().hex
 MQTT_TOPIC_SOURCE_MATCH = os.getenv('MQTT_TOPIC_SOURCE_MATCH')
 MQTT_TOPIC_SOURCE_TEMPLATE = os.getenv('MQTT_TOPIC_SOURCE_TEMPLATE')
@@ -33,9 +39,6 @@ ENVIRONMENT = os.getenv('ENVIRONMENT', '')
 SENTRY_DSN = os.getenv('SENTRY_DSN')
 
 if SENTRY_DSN:
-    import sentry_sdk
-    from sentry_sdk.integrations.logging import LoggingIntegration
-
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[
@@ -53,18 +56,17 @@ if SENTRY_DSN:
 class MessageParamsFilter(Filter):
     def filter(self, record):
         message_uuid = message_uuid_var.get()
+        record.device_id = device_id_var.get()
         record.message_uuid = message_uuid
         record.service_name = SERVICE_NAME
         record.environment = ENVIRONMENT
-        sentry_sdk.set_tag(MESSAGE_UUID, message_uuid)
-
         return True
 
 
 LOGGING = {
     'version': 1,
     'root': {
-        'level': 'DEBUG',
+        'level': LOGLEVEL,
         'handlers': ['console'],
     },
     'formatters': {
@@ -74,11 +76,11 @@ LOGGING = {
     },
     'handlers': {
         'null': {
-            'level': 'DEBUG',
+            'level': LOGLEVEL,
             'class': 'logging.NullHandler',
         },
         'console': {
-            'level': 'DEBUG',
+            'level': LOGLEVEL,
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
@@ -86,7 +88,7 @@ LOGGING = {
     'loggers': {
         '': {
             'handlers': ['console'],
-            'level': 'DEBUG',
+            'level': LOGLEVEL,
             'propagate': False,
         },
     },
