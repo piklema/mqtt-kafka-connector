@@ -50,12 +50,14 @@ class Connector:
         mqtt_topic: str,
     ) -> Optional[TopicHeaders]:
         """Get Kafka topic & headers from MQTT topic"""
-        if headers := self.mqtt_topic_params_tmpl.to_dict(mqtt_topic):
-            kafka_topic = TELEMETRY_KAFKA_TOPIC.format(**headers)
-            kafka_key = KAFKA_KEY_TEMPLATE.format(**headers).encode()
+        if mqtt_topic_params := self.mqtt_topic_params_tmpl.to_dict(
+            mqtt_topic
+        ):
+            kafka_topic = TELEMETRY_KAFKA_TOPIC.format(**mqtt_topic_params)
+            kafka_key = KAFKA_KEY_TEMPLATE.format(**mqtt_topic_params).encode()
             kafka_headers = [
                 (k, v.encode())
-                for k, v in headers.items()
+                for k, v in mqtt_topic_params.items()
                 if k in self.header_names
             ]
             return kafka_topic, kafka_key, kafka_headers
