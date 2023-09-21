@@ -35,6 +35,8 @@ jobs:
         image: piklema/mqtt-kafka-connector
         tag: ${{ env.RELEASE_VERSION }}
         registry: docker.io
+        buildArgs: |
+          RELEASE_VERSION=${{ env.RELEASE_VERSION }}
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
@@ -45,5 +47,7 @@ jobs:
         image: piklema/mqtt-kafka-connector
         tag: ${{ env.RELEASE_VERSION }}
         registry: docker-repository.piklema.com
+        buildArgs: |
+          RELEASE_VERSION=${{ env.RELEASE_VERSION }}
         username: ${{ secrets.PIKLEMA_DOCKER_USERNAME }}
         password: ${{ secrets.PIKLEMA_DOCKER_PASSWORD }}
