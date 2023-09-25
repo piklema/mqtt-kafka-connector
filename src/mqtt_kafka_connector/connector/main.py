@@ -44,6 +44,7 @@ class Connector:
         self.header_names = KAFKA_HEADERS_LIST.split(',')
         self.message_deserialize = message_deserialize
         self.schema_client = schema_client
+        self.producer: AIOKafkaProducer = None
 
     def get_kafka_producer_params(
         self,
@@ -62,17 +63,17 @@ class Connector:
             ]
             return kafka_topic, kafka_key, kafka_headers
 
-    @staticmethod
     async def send_to_kafka(
+        self,
         topic: str,
         value: bytes,
         key: bytes,
         headers: List = None,
     ) -> bool:
-        producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
         try:
-            await producer.start()
-            await producer.send(topic, value=value, key=key, headers=headers)
+            await self.producer.send(
+                topic, value=value, key=key, headers=headers
+            )
             logger.info(
                 f'Send to kafka {topic=}, {key=}, {value=}, {headers=}'
             )
@@ -80,8 +81,6 @@ class Connector:
         except KafkaConnectionError as e:
             logger.error(f'Kafka sending error {e}')
             return False
-        finally:
-            await producer.stop()
 
     async def deserialize(self, msg: Message, schema_id: int) -> dict:
         schema = await self.schema_client.get_schema(schema_id)
@@ -145,6 +144,12 @@ class Connector:
 
     async def run(self):
         logger.info('MQTT Kafka connector is running')
+
+        self.producer = AIOKafkaProducer(
+            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS
+        )
+        await self.producer.start()
+
         while True:
             try:
                 async with aiomqtt.Client(
@@ -175,6 +180,8 @@ class Connector:
                     f'Reconnecting in {MQTT_RECONNECT_INTERVAL_SEC} seconds.'
                 )
                 await asyncio.sleep(MQTT_RECONNECT_INTERVAL_SEC)
+            finally:
+                await self.producer.stop()
 
 
 def main():

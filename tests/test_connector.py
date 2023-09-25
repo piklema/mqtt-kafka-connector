@@ -46,28 +46,18 @@ def test_get_kafka_producer_params(conn):
 
 @mock.patch('mqtt_kafka_connector.connector.main.AIOKafkaProducer.send')
 async def test_send_to_kafka(producer_mock, conn, caplog):
-    with mock.patch(
-        'mqtt_kafka_connector.connector.main.AIOKafkaProducer.start',
-        new_callable=mock.AsyncMock,
-    ):
-        res = await conn.send_to_kafka(
-            MQTT_TOPIC, value=b'some_bytes1', key=b'1'
-        )
-        assert res is True
-        assert len(caplog.records) == 1
-        assert caplog.records[0].levelname == 'INFO'
+    res = await conn.send_to_kafka(MQTT_TOPIC, value=b'some_bytes1', key=b'1')
+    assert res is True
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == 'INFO'
 
-    with mock.patch(
-        'mqtt_kafka_connector.connector.main.AIOKafkaProducer.start',
-        new_callable=mock.AsyncMock,
-    ) as start_mock:
-        start_mock.side_effect = errors.KafkaConnectionError()
-        res = await conn.send_to_kafka(
-            'unmatched_topic', value=b'some_bytes2', key=b'2'
-        )
-        assert res is False
-        assert len(caplog.records) == 2
-        assert caplog.records[0].levelname == 'INFO'
+    conn.producer.send.side_effect = errors.KafkaConnectionError()
+    res = await conn.send_to_kafka(
+        'unmatched_topic', value=b'some_bytes2', key=b'2'
+    )
+    assert res is False
+    assert len(caplog.records) == 2
+    assert caplog.records[0].levelname == 'INFO'
 
 
 @dataclasses.dataclass
@@ -91,7 +81,6 @@ class TestMessagePack(AvroModel):
     'mqtt_kafka_connector.connector.main.AIOKafkaProducer.stop',
     mock.AsyncMock(),
 )
-@mock.patch('mqtt_kafka_connector.connector.main.AIOKafkaProducer.send')
 @mock.patch('mqtt_kafka_connector.connector.main.schema_client.get_schema')
 @pytest.mark.parametrize(
     'message_deserialize,message',
@@ -100,9 +89,7 @@ class TestMessagePack(AvroModel):
         (False, json.dumps(PAYLOAD).encode()),
     ],
 )
-async def test_deserialize(
-    get_schema_mock, kafka_send_mock, message_deserialize, message
-):
+async def test_deserialize(get_schema_mock, message_deserialize, message):
     get_schema_mock.return_value = TestMessagePack.avro_schema_to_python()
 
     msg = Message(
@@ -115,10 +102,11 @@ async def test_deserialize(
     )
 
     conn = Connector(message_deserialize=message_deserialize)
+    conn.producer = mock.AsyncMock()
     await conn.mqtt_message_handler(msg)
 
-    assert kafka_send_mock.call_count == len(PAYLOAD['messages'])
-    call = kafka_send_mock.mock_calls[0]
+    assert conn.producer.send.call_count == len(PAYLOAD['messages'])
+    call = conn.producer.send.mock_calls[0]
     assert call.args[0] == 'telemetry'
     assert type(call.kwargs['value']) == bytes
     value = json.loads(call.kwargs['value'])
