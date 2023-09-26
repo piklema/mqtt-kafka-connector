@@ -1,6 +1,5 @@
 import logging.config
 import os
-import uuid
 from logging import Filter
 
 import sentry_sdk
@@ -17,7 +16,7 @@ MQTT_PORT = int(os.getenv('MQTT_PORT'))
 MQTT_USER = os.getenv('MQTT_USER')
 MQTT_PASSWORD = os.getenv('MQTT_PASSWORD')
 MQTT_RECONNECT_INTERVAL_SEC = int(os.getenv('MQTT_RECONNECT_INTERVAL_SEC', 3))
-MQTT_CLIENT_ID = os.getenv('MQTT_CLIENT_ID') or uuid.uuid4().hex
+MQTT_CLIENT_ID = os.getenv('MQTT_CLIENT_ID') or 'mqtt-kafka-connector-1'
 MQTT_TOPIC_SOURCE_MATCH = os.getenv('MQTT_TOPIC_SOURCE_MATCH')
 MQTT_TOPIC_SOURCE_TEMPLATE = os.getenv('MQTT_TOPIC_SOURCE_TEMPLATE')
 

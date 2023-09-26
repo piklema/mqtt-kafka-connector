@@ -7,7 +7,7 @@ from unittest import mock
 
 import pytest
 from aiokafka import errors
-from asyncio_mqtt import Message, Topic
+from aiomqtt import Message, Topic
 from dataclasses_avroschema import AvroModel
 
 from mqtt_kafka_connector.connector import Connector

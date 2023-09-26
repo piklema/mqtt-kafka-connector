@@ -5,10 +5,9 @@ import logging
 import sys
 from typing import List, Optional, Tuple
 
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 import fastavro
 from aiokafka import AIOKafkaProducer
-from asyncio_mqtt import Message
 from kafka.errors import KafkaConnectionError
 
 from mqtt_kafka_connector.clients.schema_client import schema_client
@@ -82,7 +81,7 @@ class Connector:
             logger.error(f'Kafka sending error {e}')
             return False
 
-    async def deserialize(self, msg: Message, schema_id: int) -> dict:
+    async def deserialize(self, msg: aiomqtt.Message, schema_id: int) -> dict:
         schema = await self.schema_client.get_schema(schema_id)
 
         if not schema:
@@ -99,7 +98,7 @@ class Connector:
 
         return data
 
-    async def mqtt_message_handler(self, message: Message) -> bool:
+    async def mqtt_message_handler(self, message: aiomqtt.Message) -> bool:
         mqtt_topic = message.topic
         logger.info(
             f'Message received from {mqtt_topic.value=} '
@@ -161,7 +160,7 @@ class Connector:
                     clean_session=False,
                 ) as client:
                     async with client.messages() as messages:
-                        await client.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=2)
+                        await client.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=1)
                         async for message in messages:
                             try:
                                 mqtt_params = (
