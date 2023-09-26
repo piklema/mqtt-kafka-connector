@@ -1,7 +1,7 @@
 import asyncio
 from io import BytesIO
 
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 import fastavro
 
 from mqtt_kafka_connector import conf
