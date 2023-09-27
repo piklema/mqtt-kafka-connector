@@ -135,13 +135,11 @@ class Connector:
 
     async def run(self):
         logger.info('MQTT Kafka connector starting...')
-
-        self.producer = AIOKafkaProducer(
-            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS
-        )
-
         while True:
             try:
+                self.producer = AIOKafkaProducer(
+                    bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS
+                )
                 await self.producer.start()
                 logger.info('Kafka Producer is running')
                 async with aiomqtt.Client(
