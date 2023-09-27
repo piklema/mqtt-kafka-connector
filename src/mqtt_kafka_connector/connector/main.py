@@ -70,7 +70,7 @@ class Connector:
         headers: List = None,
     ) -> bool:
         await self.producer.send(topic, value=value, key=key, headers=headers)
-        logger.info(f'Send to kafka {topic=}, {key=}, {value=}, {headers=}')
+        logger.info('Send to kafka %s %s %s %s', topic, key, value, headers)
         return True
 
     async def deserialize(self, msg: aiomqtt.Message, schema_id: int) -> dict:
@@ -162,19 +162,22 @@ class Connector:
                                 )
                                 setup_vars(mqtt_params.get('device_id'))
                                 await self.mqtt_message_handler(message)
-                            except RuntimeError as e:
-                                logger.error(f'Runtime error: {e}')
+                            except RuntimeError as error:
+                                logger.error('Runtime error: %s', error)
 
             except aiomqtt.MqttError as error:
                 logger.warning(
-                    f'MQTT connection error {error=}. '
-                    f'Reconnecting in {RECONNECT_INTERVAL_SEC} seconds.'
+                    'MQTT connection error %s. ' 'Reconnecting in %s seconds.',
+                    error,
+                    RECONNECT_INTERVAL_SEC,
                 )
                 await asyncio.sleep(RECONNECT_INTERVAL_SEC)
             except KafkaConnectionError as error:
                 logger.warning(
-                    f'Kafka connection error {error=}. '
-                    f'Reconnecting in {RECONNECT_INTERVAL_SEC} seconds.'
+                    'Kafka connection error %s. '
+                    'Reconnecting in %s seconds.',
+                    error,
+                    RECONNECT_INTERVAL_SEC,
                 )
                 await asyncio.sleep(RECONNECT_INTERVAL_SEC)
             finally:

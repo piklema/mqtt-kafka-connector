@@ -13,7 +13,7 @@ class BaseHTTPClient:
         self.headers = headers
 
     async def request(self, url: str, method: str, **kwargs) -> dict:
-        logger.info(f'HTTP request: {method=}, {url=}, {kwargs=}')
+        logger.info('HTTP request: %s %s %s', method, url, kwargs)
         async with httpx.AsyncClient(
             headers=self.headers, timeout=1
         ) as client:
@@ -23,20 +23,21 @@ class BaseHTTPClient:
                 )
                 resp_json = resp.json()
 
-                logger.info(f'HTTP response: {resp_json}')
+                logger.info('HTTP response: %s', resp_json)
 
                 if resp.status_code not in [
                     httpx.codes.OK,
                     httpx.codes.CREATED,
                 ]:
                     raise RuntimeError(
-                        f'Failed request with status {resp.status_code} '
-                        f'error {resp_json}'
+                        'Failed request with status %s ' 'error %s',
+                        resp.status_code,
+                        resp_json,
                     )
 
                 return resp_json
 
             except (httpx.HTTPError, JSONDecodeError) as e:
-                logger.error(f'HTTP error: {e}')
+                logger.error('HTTP error: %s', e)
 
     get: typing.Callable = functools.partialmethod(request, method='get')
