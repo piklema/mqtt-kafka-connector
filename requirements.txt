@@ -1,5 +1,5 @@
 aiokafka==0.8.1
-async_lru==2.0.4
+aiocache==0.12.2
 aiomqtt==1.2.1
 dataclasses-avroschema==0.51.0
 httpx==0.25.0

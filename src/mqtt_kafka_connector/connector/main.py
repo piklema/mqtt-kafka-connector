@@ -20,10 +20,10 @@ from mqtt_kafka_connector.conf import (
     MQTT_HOST,
     MQTT_PASSWORD,
     MQTT_PORT,
-    MQTT_RECONNECT_INTERVAL_SEC,
     MQTT_TOPIC_SOURCE_MATCH,
     MQTT_TOPIC_SOURCE_TEMPLATE,
     MQTT_USER,
+    RECONNECT_INTERVAL_SEC,
     TELEMETRY_KAFKA_TOPIC,
     TRACE_HEADER,
 )
@@ -69,17 +69,9 @@ class Connector:
         key: bytes,
         headers: List = None,
     ) -> bool:
-        try:
-            await self.producer.send(
-                topic, value=value, key=key, headers=headers
-            )
-            logger.info(
-                f'Send to kafka {topic=}, {key=}, {value=}, {headers=}'
-            )
-            return True
-        except KafkaConnectionError as e:
-            logger.error(f'Kafka sending error {e}')
-            return False
+        await self.producer.send(topic, value=value, key=key, headers=headers)
+        logger.info('Send to kafka %s %s %s %s', topic, key, value, headers)
+        return True
 
     async def deserialize(self, msg: aiomqtt.Message, schema_id: int) -> dict:
         schema = await self.schema_client.get_schema(schema_id)
@@ -142,15 +134,14 @@ class Connector:
             return False
 
     async def run(self):
-        logger.info('MQTT Kafka connector is running')
-
-        self.producer = AIOKafkaProducer(
-            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS
-        )
-        await self.producer.start()
-
+        logger.info('MQTT Kafka connector starting...')
         while True:
             try:
+                self.producer = AIOKafkaProducer(
+                    bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS
+                )
+                await self.producer.start()
+                logger.info('Kafka Producer is running')
                 async with aiomqtt.Client(
                     hostname=MQTT_HOST,
                     port=MQTT_PORT,
@@ -159,6 +150,7 @@ class Connector:
                     client_id=MQTT_CLIENT_ID,
                     clean_session=False,
                 ) as client:
+                    logger.info('MQTT Client is running')
                     async with client.messages() as messages:
                         await client.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=1)
                         async for message in messages:
@@ -170,15 +162,24 @@ class Connector:
                                 )
                                 setup_vars(mqtt_params.get('device_id'))
                                 await self.mqtt_message_handler(message)
-                            except RuntimeError as e:
-                                logger.error(f'Runtime error: {e}')
+                            except RuntimeError as error:
+                                logger.error('Runtime error: %s', error)
 
             except aiomqtt.MqttError as error:
                 logger.warning(
-                    f'Error {error=}. '
-                    f'Reconnecting in {MQTT_RECONNECT_INTERVAL_SEC} seconds.'
+                    'MQTT connection error %s. ' 'Reconnecting in %s seconds.',
+                    error,
+                    RECONNECT_INTERVAL_SEC,
                 )
-                await asyncio.sleep(MQTT_RECONNECT_INTERVAL_SEC)
+                await asyncio.sleep(RECONNECT_INTERVAL_SEC)
+            except KafkaConnectionError as error:
+                logger.warning(
+                    'Kafka connection error %s. '
+                    'Reconnecting in %s seconds.',
+                    error,
+                    RECONNECT_INTERVAL_SEC,
+                )
+                await asyncio.sleep(RECONNECT_INTERVAL_SEC)
             finally:
                 await self.producer.stop()
 
