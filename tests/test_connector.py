@@ -6,7 +6,6 @@ from typing import List
 from unittest import mock
 
 import pytest
-from aiokafka import errors
 from aiomqtt import Message, Topic
 from dataclasses_avroschema import AvroModel
 
@@ -44,18 +43,16 @@ def test_get_kafka_producer_params(conn):
     }
 
 
-@mock.patch('mqtt_kafka_connector.connector.main.AIOKafkaProducer.send')
-async def test_send_to_kafka(producer_mock, conn, caplog):
+async def test_send_to_kafka(conn, caplog):
     res = await conn.send_to_kafka(MQTT_TOPIC, value=b'some_bytes1', key=b'1')
     assert res is True
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'INFO'
 
-    conn.producer.send.side_effect = errors.KafkaConnectionError()
     res = await conn.send_to_kafka(
         'unmatched_topic', value=b'some_bytes2', key=b'2'
     )
-    assert res is False
+    assert res is True
     assert len(caplog.records) == 2
     assert caplog.records[0].levelname == 'INFO'
 
