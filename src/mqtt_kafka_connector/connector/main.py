@@ -27,7 +27,10 @@ from mqtt_kafka_connector.conf import (
     TELEMETRY_KAFKA_TOPIC,
     TRACE_HEADER,
 )
-from mqtt_kafka_connector.context_vars import message_uuid_var, setup_vars
+from mqtt_kafka_connector.context_vars import (
+    message_uuid_var,
+    setup_context_vars,
+)
 from mqtt_kafka_connector.utils import DateTimeEncoder, Template
 
 logger = logging.getLogger(__name__)
@@ -160,7 +163,9 @@ class Connector:
                                         message.topic.value
                                     )
                                 )
-                                setup_vars(mqtt_params.get('device_id'))
+                                setup_context_vars(
+                                    mqtt_params.get('device_id')
+                                )
                                 await self.mqtt_message_handler(message)
                             except RuntimeError as error:
                                 logger.error('Runtime error: %s', error)
