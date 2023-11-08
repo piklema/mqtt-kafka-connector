@@ -86,7 +86,7 @@ class Connector:
         try:
             parsed_schema = fastavro.parse_schema(schema)
             data = fastavro.schemaless_reader(fp, parsed_schema)
-        except (IndexError, StopIteration):
+        except (IndexError, StopIteration, EOFError):
             raise RuntimeError('Message is not valid')
 
         logger.info(f"Message deserialized: {data=}")
