@@ -5,7 +5,7 @@ import pytest
 from mqtt_kafka_connector.connector import Connector
 
 
-@pytest.fixture
+@pytest.fixture()
 def conn():
     conn = Connector()
     conn.producer = mock.AsyncMock()
@@ -19,3 +19,6 @@ class DummyResponse:
 
     def json(self):
         return self.data
+
+    def raise_for_status(self):
+        pass

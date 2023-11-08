@@ -14,13 +14,10 @@ class BaseHTTPClient:
 
     async def request(self, url: str, method: str, **kwargs) -> dict:
         logger.info('HTTP request: %s %s %s', method, url, kwargs)
-        async with httpx.AsyncClient(
-            headers=self.headers, timeout=1
-        ) as client:
+        async with httpx.AsyncClient(headers=self.headers, timeout=1) as client:
             try:
-                resp = await getattr(client, method)(
-                    url, headers=self.headers, **kwargs
-                )
+                resp = await getattr(client, method)(url, headers=self.headers, **kwargs)
+                resp.raise_for_status()
                 resp_json = resp.json()
 
                 logger.info('HTTP response: %s', resp_json)
@@ -37,7 +34,10 @@ class BaseHTTPClient:
 
                 return resp_json
 
-            except (httpx.HTTPError, JSONDecodeError) as e:
-                logger.error('HTTP error: %s', e)
+            except httpx.HTTPError as e:
+                logger.error("HTTPError: %s", e)
+
+            except JSONDecodeError as e:
+                logger.error('JSONDecodeError: %s', e)
 
     get: typing.Callable = functools.partialmethod(request, method='get')

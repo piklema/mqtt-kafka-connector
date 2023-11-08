@@ -47,11 +47,11 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 
 lint/flake8: ## check style with flake8
-	flake8 src tests
+	@flake8 src tests
 lint/black: ## check style with black
-	black --check src tests
+	@black --check src tests
 lint/isort:
-	isort --check-only src tests
+	@isort --check-only src tests
 
 lint: lint/flake8 lint/black lint/isort ## check style
 
@@ -71,6 +71,20 @@ dist: clean ## builds source and wheel package
 	python setup.py sdist
 	python setup.py bdist_wheel
 	ls -l dist
+uninstall:
+	pip uninstall mqtt-kafka-connector -yy
 
-install: clean ## install the package to the active Python's site-packages
+install: uninstall clean ## install the package to the active Python's site-packages
 	python setup.py install
+
+run: ## run local
+	@python  src/mqtt_kafka_connector/connector/main.py
+
+requirements_uninstall: ##
+	@pip freeze | grep -v "pkg-resources" | grep -v "@" | xargs -r pip uninstall -y --quiet
+
+requirements_install:  ##
+	@pip install -r ./requirements_dev.txt --quiet
+
+flake8_check: requirements_uninstall requirements_install ## проверка flake с синхронизацией пактов
+	@flake8

@@ -6,6 +6,7 @@ ENV RELEASE_VERSION=${RELEASE_VERSION}
 COPY . /app
 WORKDIR /app
 
+
 RUN pip install -e .
 
 ENTRYPOINT ["mqtt_kafka_connector"]

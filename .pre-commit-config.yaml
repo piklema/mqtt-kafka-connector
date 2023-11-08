@@ -1,0 +1,55 @@
+---
+
+repos:
+    -   repo: https://github.com/pre-commit/pre-commit-hooks
+        rev: v4.5.0
+        hooks:
+            -   id: trailing-whitespace
+                stages: [ pre-commit ]
+            -   id: end-of-file-fixer
+                stages: [ pre-commit ]
+            -   id: check-added-large-files
+                stages: [ pre-commit ]
+    -   repo: https://github.com/asottile/pyupgrade
+        rev: v3.15.0
+        hooks:
+            -   id: pyupgrade
+                args: [ --py311-plus ]
+
+
+    -   repo: https://github.com/pre-commit/pre-commit-hooks
+        rev: v4.5.0
+        hooks:
+            -   id: check-ast
+            -   id: check-toml
+            -   id: check-yaml
+            -   id: check-case-conflict
+            -   id: check-merge-conflict
+
+    -   repo: https://github.com/asottile/add-trailing-comma
+        rev: v3.1.0
+        hooks:
+            -   id: add-trailing-comma
+
+    -   repo: local
+        hooks:
+            -   id: yesqa
+                name: yesqa
+                entry: yesqa
+                language: system
+                types: [ python ]
+
+            -   id: flake
+                exclude: '^.*\.py$'
+                name: Run flake8
+                entry: "flake8"
+                language: python
+                verbose: true
+
+            -   id: tests
+                exclude: '^.*$'
+                name: Run tests
+                entry: pytest
+                language: python
+                verbose: true
+                always_run: true

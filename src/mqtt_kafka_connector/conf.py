@@ -9,7 +9,6 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 from mqtt_kafka_connector.context_vars import device_id_var, message_uuid_var
 
 load_dotenv()
-
 LOGLEVEL = os.getenv('LOGLEVEL', 'INFO')
 MQTT_HOST = os.getenv('MQTT_HOST')
 MQTT_PORT = int(os.getenv('MQTT_PORT'))
@@ -28,12 +27,17 @@ TRACE_HEADER = os.getenv('TRACE_HEADER')
 SCHEMA_REGISTRY_URL = os.getenv('SCHEMA_REGISTRY_URL')
 SCHEMA_REGISTRY_REQUEST_HEADERS = os.getenv('SCHEMA_REGISTRY_REQUEST_HEADERS')
 MESSAGE_DESERIALIZE = SCHEMA_REGISTRY_URL and SCHEMA_REGISTRY_REQUEST_HEADERS
-SCHEMA_CACHE_TTL = int(os.getenv('SCHEMA_CACHE_TTL', 60))
+SCHEMA_CACHE_TTL = int(os.getenv('SCHEMA_CACHE_TTL', 60) or 0)
 
 SERVICE_NAME = 'piklema-mqtt-kafka-connector'
 ENVIRONMENT = os.getenv('ENVIRONMENT', '')
 
 SENTRY_DSN = os.getenv('SENTRY_DSN')
+MODIFY_MESSAGE_RM_NONE_FIELDS = bool(os.getenv('MODIFY_MESSAGE_RM_NONE_FIELDS', True))
+MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS = bool(os.getenv('MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS', False))
+
+# MODIFY_MESSAGE_RM_NONE_FIELDS=true
+# MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS=false
 
 if SENTRY_DSN:
     sentry_sdk.init(
@@ -68,7 +72,7 @@ LOGGING = {
     },
     'formatters': {
         'verbose': {
-            'format': '%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s:%(lineno)d - %(message)s'  # noqa
+            'format': '%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s:%(lineno)d - %(message)s',
         },
     },
     'handlers': {
@@ -86,7 +90,7 @@ LOGGING = {
         '': {
             'handlers': ['console'],
             'level': LOGLEVEL,
-            'propagate': False,
+            'propagate': True,
         },
     },
     'filters': {

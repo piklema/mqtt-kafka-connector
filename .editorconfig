@@ -1,0 +1,58 @@
+# https://editorconfig.org/
+
+root = true
+
+
+[*]
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+end_of_line = lf
+charset = utf-8
+max_line_length = 128
+
+[/dist/**]
+generated_code = true
+
+[/build/**]
+generated_code = true
+
+[/node_modules/**]
+generated_code = true
+
+[/src/planiqum.egg-info/**]
+generated_code = true
+
+[/infrastructure/docker/persistence/**]
+generated_code = true
+
+
+# Docstrings and comments use max_line_length = 79
+# [*.py]
+
+# Use 2 spaces for the HTML files
+[*.html]
+indent_size = 2
+
+# Use 2 spaces for the HTML files
+[*.yml]
+indent_size = 4
+
+[*.yaml]
+indent_size = 4
+
+# The JSON files contain newlines inconsistently
+[*.json]
+indent_size = 2
+
+[*.js]
+indent_size = 1
+
+# For bash scripts
+# [*.sh]
+# indent_size = 4
+
+# Makefiles always use tabs for indentation
+[Makefile]
+indent_style = tab
