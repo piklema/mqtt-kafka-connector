@@ -2,8 +2,9 @@
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
-import os, webbrowser, sys
-
+import os
+import sys
+import webbrowser
 from urllib.request import pathname2url
 
 webbrowser.open("file://" + pathname2url(os.path.abspath(sys.argv[1])))
@@ -11,7 +12,8 @@ endef
 export BROWSER_PYSCRIPT
 
 define PRINT_HELP_PYSCRIPT
-import re, sys
+import re
+import sys
 
 for line in sys.stdin:
 	match = re.match(r'^([a-zA-Z_-]+):.*?## (.*)$$', line)
@@ -71,6 +73,20 @@ dist: clean ## builds source and wheel package
 	python setup.py sdist
 	python setup.py bdist_wheel
 	ls -l dist
+uninstall:
+	pip uninstall mqtt-kafka-connector -yy
 
-install: clean ## install the package to the active Python's site-packages
+install: uninstall clean ## install the package to the active Python's site-packages
 	python setup.py install
+
+run: ## run local
+	@python  src/mqtt_kafka_connector/connector/main.py
+
+requirements_uninstall: ##
+	@pip freeze | grep -v "pkg-resources" | grep -v "@" | xargs -r pip uninstall -y --quiet
+
+requirements_install:  ##
+	@pip install -r ./requirements_dev.txt --quiet
+
+flake8_check: requirements_uninstall requirements_install ## проверка flake с синхронизацией пактов
+	@flake8
