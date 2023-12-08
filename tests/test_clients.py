@@ -1,10 +1,10 @@
 from unittest.mock import patch
 
 import pytest
-from conftest import DummyResponse
 
 from mqtt_kafka_connector.clients.base_http import BaseHTTPClient
 from mqtt_kafka_connector.clients.schema_client import SchemaClient
+from tests.conftest import DummyResponse
 
 SCHEMA_URL = 'https://domain.com/api/v1/schemas'
 
@@ -14,9 +14,7 @@ async def test_http_client(httpx_mock):
     params = {'test': 'test'}
     httpx_mock.return_value = DummyResponse(200, params)
     client = BaseHTTPClient(headers={'Authorization': 'Token 123'})
-    resp_json = await client.request(
-        url=SCHEMA_URL, method='get', params=params
-    )
+    resp_json = await client.request(url=SCHEMA_URL, method='get', params=params)
     assert resp_json == params
 
     # test 404

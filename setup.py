@@ -17,10 +17,8 @@ with open('requirements_dev.txt') as req_dev_file:
 setup(
     author='Sergey Dubovitsky',
     author_email='sergey.dubovitsky@piklema.com',
-    python_requires='>=3.8',
+    python_requires='>=3.10',
     classifiers=[
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
     ],

@@ -1,5 +1,6 @@
 import logging.config
 import os
+from distutils.util import strtobool
 from logging import Filter
 
 import sentry_sdk
@@ -9,7 +10,6 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 from mqtt_kafka_connector.context_vars import device_id_var, message_uuid_var
 
 load_dotenv()
-
 LOGLEVEL = os.getenv('LOGLEVEL', 'INFO')
 MQTT_HOST = os.getenv('MQTT_HOST')
 MQTT_PORT = int(os.getenv('MQTT_PORT'))
@@ -34,6 +34,8 @@ SERVICE_NAME = 'piklema-mqtt-kafka-connector'
 ENVIRONMENT = os.getenv('ENVIRONMENT', '')
 
 SENTRY_DSN = os.getenv('SENTRY_DSN')
+MODIFY_MESSAGE_RM_NONE_FIELDS = strtobool(os.getenv('MODIFY_MESSAGE_RM_NONE_FIELDS', 'True'))
+MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS = strtobool(os.getenv('MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS', 'False'))
 
 if SENTRY_DSN:
     sentry_sdk.init(
@@ -68,7 +70,7 @@ LOGGING = {
     },
     'formatters': {
         'verbose': {
-            'format': '%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s:%(lineno)d - %(message)s'  # noqa
+            'format': '%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s:%(lineno)d - %(message)s',
         },
     },
     'handlers': {
@@ -86,7 +88,7 @@ LOGGING = {
         '': {
             'handlers': ['console'],
             'level': LOGLEVEL,
-            'propagate': False,
+            'propagate': True,
         },
     },
     'filters': {

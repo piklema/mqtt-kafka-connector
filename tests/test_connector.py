@@ -1,8 +1,6 @@
 import dataclasses
 import datetime
 import json
-import time
-from typing import List
 from unittest import mock
 
 import pytest
@@ -16,7 +14,7 @@ MQTT_TOPIC = 'customer/11111/dev/22222/v333333'
 PAYLOAD = dict(
     messages=[
         dict(
-            time=time.time_ns() // 1_000_000,
+            time=1701955305760 // 1_000_000,
             speed=45.67,
             lat=12.3456,
             lon=23.4567,
@@ -27,7 +25,7 @@ PAYLOAD = dict(
             lat=12.3457,
             lon=23.4568,
         ),
-    ]
+    ],
 )
 
 
@@ -49,16 +47,14 @@ async def test_send_to_kafka(conn, caplog):
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == 'INFO'
 
-    res = await conn.send_to_kafka(
-        'unmatched_topic', value=b'some_bytes2', key=b'2'
-    )
+    res = await conn.send_to_kafka('unmatched_topic', value=b'some_bytes2', key=b'2')
     assert res is True
     assert len(caplog.records) == 2
     assert caplog.records[0].levelname == 'INFO'
 
 
 @dataclasses.dataclass
-class TestMessage(AvroModel):
+class MessageModel(AvroModel):
     time: datetime.datetime
     speed: float
     lat: float
@@ -66,8 +62,8 @@ class TestMessage(AvroModel):
 
 
 @dataclasses.dataclass
-class TestMessagePack(AvroModel):
-    messages: List[TestMessage]
+class MessagePack(AvroModel):
+    messages: list[MessageModel]
 
 
 @mock.patch(
@@ -80,14 +76,17 @@ class TestMessagePack(AvroModel):
 )
 @mock.patch('mqtt_kafka_connector.connector.main.schema_client.get_schema')
 @pytest.mark.parametrize(
-    'message_deserialize,message',
-    [
-        (True, TestMessagePack(**PAYLOAD).serialize()),
-        (False, json.dumps(PAYLOAD).encode()),
-    ],
+    ('message_deserialize', 'message'),
+    sorted(
+        [
+            (True, MessagePack(**PAYLOAD).serialize()),
+            (False, json.dumps(PAYLOAD).encode()),
+        ],
+        key=lambda x: x[0],
+    ),
 )
 async def test_deserialize(get_schema_mock, message_deserialize, message):
-    get_schema_mock.return_value = TestMessagePack.avro_schema_to_python()
+    get_schema_mock.return_value = MessagePack.avro_schema_to_python()
 
     msg = Message(
         topic=Topic(MQTT_TOPIC),
@@ -105,15 +104,15 @@ async def test_deserialize(get_schema_mock, message_deserialize, message):
     assert conn.producer.send.call_count == len(PAYLOAD['messages'])
     call = conn.producer.send.mock_calls[0]
     assert call.args[0] == 'telemetry'
-    assert type(call.kwargs['value']) == bytes
+    assert isinstance(call.kwargs['value'], bytes)
     value = json.loads(call.kwargs['value'])
     expected_message = PAYLOAD['messages'][0]
     assert value['time']
     assert value['speed'] == expected_message['speed']
     assert value['lat'] == expected_message['lat']
     assert value['lon'] == expected_message['lon']
-    assert type(call.kwargs['key']) == bytes
-    assert type(call.kwargs['headers']) == list
+    assert isinstance(call.kwargs['key'], bytes)
+    assert issubclass(type(call.kwargs['headers']), list)
 
     headers = dict(call.kwargs['headers'])
     assert headers['schema_id'] == b'333333'
@@ -122,17 +121,15 @@ async def test_deserialize(get_schema_mock, message_deserialize, message):
 
     assert 'message_uuid' in headers
 
-    for key, value in headers.items():
-        assert type(value) == bytes
+    for value in headers.values():
+        assert isinstance(value, bytes)
 
 
 async def test_serialize_deserialize():
-    message = TestMessagePack(**PAYLOAD)
-    data_serialized = message.serialize()
+    message_pack = MessagePack(**PAYLOAD)
+    data_serialized = message_pack.serialize()
     assert isinstance(data_serialized, bytes)
 
-    data_deserialized = TestMessagePack.deserialize(data_serialized).asdict()
-    assert isinstance(data_deserialized, dict)
-    assert isinstance(
-        data_deserialized['messages'][0]['time'], datetime.datetime
-    )
+    data_deserialized = MessagePack.deserialize(data_serialized).asdict()
+    assert data_deserialized
+    assert isinstance(data_deserialized['messages'][0]['time'], datetime.datetime)
