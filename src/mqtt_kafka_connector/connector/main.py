@@ -81,14 +81,17 @@ class Connector:
         except (IndexError, StopIteration, EOFError):
             raise RuntimeError('Message is not valid')
 
-        logger.info(f"Message deserialized: {data=}")
+        logger.info("Message deserialized: data=%s", data)
 
         return data
 
     async def mqtt_message_handler(self, message: aiomqtt.Message) -> bool:
         mqtt_topic = message.topic
         logger.info(
-            f'Message received from {mqtt_topic.value=} ' f'{message.payload=} {message.qos=}',
+            'Message received from mqtt_topic.value=%s message.payload=%s message.qos=%s',
+            mqtt_topic.value,
+            message.payload,
+            message.qos,
         )
         res = self.get_kafka_producer_params(mqtt_topic.value)
         if res:
@@ -129,7 +132,7 @@ class Connector:
                 )
             return all(res)
         else:
-            logger.warning(f'Error prepare kafka topic from {mqtt_topic.value=}')
+            logger.warning('Error prepare kafka topic from mqtt_topic.value=%s', mqtt_topic.value)
             return False
 
     async def run(self):

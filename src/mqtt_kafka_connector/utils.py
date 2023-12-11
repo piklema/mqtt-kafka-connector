@@ -1,6 +1,5 @@
 import datetime
 import re
-import struct
 from json import JSONEncoder
 
 
@@ -30,19 +29,6 @@ class Template:
         regex_str = self.tpl_to_regex(self.src_tpl)
         matches = re.match(regex_str, topic)
         return matches.groupdict() if matches else {}
-
-
-def binary(num) -> str:
-    """float to 10100101010010101010 string"""
-    return ''.join(f'{c:0>8b}' for c in struct.pack('d', num))
-
-
-def clean_empty_fields(input_dict: dict | list) -> any:
-    if isinstance(input_dict, dict):
-        return {k: v for k, v in ((k, clean_empty_fields(v)) for k, v in input_dict.items()) if v}
-    if isinstance(input_dict, list):
-        return [v for v in map(clean_empty_fields, input_dict) if v]
-    return input_dict
 
 
 def clean_none_fields(input_dict: dict | list) -> any:

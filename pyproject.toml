@@ -11,12 +11,8 @@ pythonpath = [
     "src"
 ]
 filterwarnings = [
-    "ignore::django.conf.RemovedInDjango50Warning",
-    "ignore::django.conf.RemovedInDjango51Warning",
     "ignore::DeprecationWarning",
-    "ignore:::.*kombu.*",
     "ignore::*PytestCollectionWarning*"
-
 ]
 tests_require = [
     "develop"
