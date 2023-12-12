@@ -1,0 +1,3 @@
+[bandit]
+exclude = tests,
+tests: B101, S101

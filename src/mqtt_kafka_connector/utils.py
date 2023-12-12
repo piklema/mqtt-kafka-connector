@@ -29,3 +29,12 @@ class Template:
         regex_str = self.tpl_to_regex(self.src_tpl)
         matches = re.match(regex_str, topic)
         return matches.groupdict() if matches else {}
+
+
+def clean_none_fields(input_dict: dict | list) -> any:
+    if isinstance(input_dict, dict):
+        return {k: v for k, v in ((kk, clean_none_fields(vv)) for kk, vv in input_dict.items()) if v is not None}
+    if isinstance(input_dict, list):
+        return [v for v in map(clean_none_fields, input_dict) if v is not None]
+
+    return input_dict
