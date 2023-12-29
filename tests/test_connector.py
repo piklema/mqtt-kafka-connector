@@ -45,12 +45,12 @@ async def test_send_to_kafka(conn, caplog):
     res = await conn.send_to_kafka(MQTT_TOPIC, value=b'some_bytes1', key=b'1')
     assert res is True
     assert len(caplog.records) == 1
-    assert caplog.records[0].levelname == 'INFO'
+    assert caplog.records[0].levelname == 'DEBUG'
 
     res = await conn.send_to_kafka('unmatched_topic', value=b'some_bytes2', key=b'2')
     assert res is True
     assert len(caplog.records) == 2
-    assert caplog.records[0].levelname == 'INFO'
+    assert caplog.records[0].levelname == 'DEBUG'
 
 
 @dataclasses.dataclass
