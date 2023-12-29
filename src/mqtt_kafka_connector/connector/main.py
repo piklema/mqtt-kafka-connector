@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import sys
+from collections import defaultdict
 
 import aiomqtt
 import fastavro
@@ -45,6 +46,7 @@ class Connector:
         self.message_deserialize = message_deserialize
         self.schema_client = schema_client
         self.producer: AIOKafkaProducer = None
+        self.last_messages = defaultdict(dict)
 
     def get_kafka_producer_params(
         self,
@@ -65,7 +67,7 @@ class Connector:
         headers: list = None,
     ) -> bool:
         await self.producer.send(topic, value=value, key=key, headers=headers)
-        logger.info('Send to kafka %s %s %s %s', topic, key, value, headers)
+        logger.debug('Send to kafka %s %s %s %s', topic, key, value, headers)
         return True
 
     async def deserialize(self, msg: aiomqtt.Message, schema_id: int) -> dict:
@@ -81,13 +83,13 @@ class Connector:
         except (IndexError, StopIteration, EOFError):
             raise RuntimeError('Message is not valid')
 
-        logger.info("Message deserialized: data=%s", data)
+        logger.debug("Message deserialized: data=%s", data)
 
         return data
 
     async def mqtt_message_handler(self, message: aiomqtt.Message) -> bool:
         mqtt_topic = message.topic
-        logger.info(
+        logger.debug(
             'Message received from mqtt_topic.value=%s message.payload=%s message.qos=%s',
             mqtt_topic.value,
             message.payload,
@@ -110,27 +112,38 @@ class Connector:
             if TRACE_HEADER:
                 kafka_headers.append((TRACE_HEADER, message_uuid_var.get().encode()))
 
-            res = []
+            last_message = messages[-1]
+            messages_count = len(messages)
+
+            if self.last_messages[mqtt_topic] != last_message:
+                self.last_messages[mqtt_topic] = last_message
+            else:
+                logger.warning('Message is duplicate. Skip sending to kafka')
+                return False
+
+            logger.info('Start sending %s messages to kafka', messages_count)
+
             for message in messages:
                 if MODIFY_MESSAGE_RM_NONE_FIELDS:
                     message = clean_none_fields(message)
 
-                """ Неявное приведение к стандарту JSON без NaN, Inf, -Inf Значений через orjson),"""
+                # Implicit casting to JSON standard without NaN, Inf, -Inf values with orjson)
                 json_for_kafka = (
                     orjson.dumps(message)
                     if MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS
                     else json.dumps(message, cls=DateTimeEncoder).encode()
                 )
 
-                res.append(
-                    await self.send_to_kafka(
-                        kafka_topic,
-                        value=json_for_kafka,
-                        key=kafka_key,
-                        headers=kafka_headers,
-                    ),
+                await self.send_to_kafka(
+                    kafka_topic,
+                    value=json_for_kafka,
+                    key=kafka_key,
+                    headers=kafka_headers,
                 )
-            return all(res)
+
+            logger.info('End sending %s messages to kafka, last_message: %s', messages_count, last_message)
+            return True
+
         else:
             logger.warning('Error prepare kafka topic from mqtt_topic.value=%s', mqtt_topic.value)
             return False

@@ -12,7 +12,7 @@ from mqtt_kafka_connector.context_vars import device_id_var, message_uuid_var
 load_dotenv()
 LOGLEVEL = os.getenv('LOGLEVEL', 'INFO')
 MQTT_HOST = os.getenv('MQTT_HOST')
-MQTT_PORT = int(os.getenv('MQTT_PORT'))
+MQTT_PORT = int(os.getenv('MQTT_PORT') or 1883)
 MQTT_USER = os.getenv('MQTT_USER')
 MQTT_PASSWORD = os.getenv('MQTT_PASSWORD')
 RECONNECT_INTERVAL_SEC = int(os.getenv('RECONNECT_INTERVAL_SEC', 3))
