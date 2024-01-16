@@ -109,6 +109,10 @@ class Connector:
                 data = message.payload
                 messages = json.loads(data.decode())['messages']
 
+            if not messages:
+                logger.warning('Messages is empty')
+                return False
+
             if TRACE_HEADER:
                 kafka_headers.append((TRACE_HEADER, message_uuid_var.get().encode()))
 
