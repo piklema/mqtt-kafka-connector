@@ -4,6 +4,7 @@ import json
 import logging
 import sys
 from collections import defaultdict
+import random
 
 import aiomqtt
 import fastavro
@@ -66,7 +67,7 @@ class Connector:
         key: bytes,
         headers: list = None,
     ) -> bool:
-        await self.producer.send(topic, value=value, key=key, headers=headers)
+        # await self.producer.send(topic, value=value, key=key, headers=headers)
         logger.debug('Send to kafka %s %s %s %s', topic, key, value, headers)
         return True
 
@@ -125,7 +126,9 @@ class Connector:
                 logger.info('Message is duplicate. Skip sending to kafka')
                 return False
 
-            logger.info('Start sending %s messages to kafka', messages_count)
+            logger.info('Receive %s messages from %s', messages_count, mqtt_topic)
+
+            # batch = self.producer.create_batch()
 
             for message in messages:
                 if MODIFY_MESSAGE_RM_NONE_FIELDS:
@@ -137,6 +140,12 @@ class Connector:
                     if MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS
                     else json.dumps(message, cls=DateTimeEncoder).encode()
                 )
+                # metadata = batch.append(key=kafka_key, value=json_for_kafka, headers=kafka_headers, timestamp=None)
+                #
+                # if metadata is None:
+                #     await self.send_batch(kafka_topic, batch)
+                #     batch = self.producer.create_batch()
+                #     continue
 
                 await self.send_to_kafka(
                     kafka_topic,
@@ -144,13 +153,19 @@ class Connector:
                     key=kafka_key,
                     headers=kafka_headers,
                 )
+            # await self.send_batch(kafka_topic, batch, 2)
 
-            logger.info('End sending %s messages to kafka, last_message: %s', messages_count, last_message)
             return True
 
         else:
             logger.warning('Error prepare kafka topic from mqtt_topic.value=%s', mqtt_topic.value)
             return False
+
+    async def send_batch(self, kafka_topic, batch, desc: str = 1):
+        partitions = await self.producer.partitions_for(kafka_topic)
+        partition = random.choice(tuple(partitions))
+        await self.producer.send_batch(batch, kafka_topic, partition=partition)
+        logger.info('Sent %s messages to kafka, partition %s, desc %s',batch.record_count(), partition, desc)
 
     async def run(self):
         logger.info('MQTT Kafka connector starting...')
@@ -164,19 +179,34 @@ class Connector:
                     port=MQTT_PORT,
                     username=MQTT_USER,
                     password=MQTT_PASSWORD,
-                    client_id=MQTT_CLIENT_ID,
+                    # client_id=MQTT_CLIENT_ID,
+                    identifier=MQTT_CLIENT_ID,
                     clean_session=False,
+                    timeout=300,
+                    # transport='websockets',
                 ) as client:
                     logger.info('MQTT Client is running')
-                    async with client.messages() as messages:
-                        await client.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=1)
-                        async for message in messages:
+                    await client.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=1)
+                    async with asyncio.TaskGroup() as tg:
+                        async for message in client.messages:
                             try:
-                                mqtt_params = self.mqtt_topic_params_tmpl.to_dict(message.topic.value)
-                                setup_context_vars(mqtt_params.get('device_id'))
-                                await self.mqtt_message_handler(message)
+                                # mqtt_params = self.mqtt_topic_params_tmpl.to_dict(message.topic.value)
+                                # setup_context_vars(mqtt_params.get('device_id'))
+                                # await self.mqtt_message_handler(message)
+                                tg.create_task(self.handle(message))
+
                             except RuntimeError as error:
                                 logger.error('Runtime error: %s', error)
+
+                    # await client.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=1)
+                    # async for message in client.messages:
+                    #     try:
+                    #         mqtt_params = self.mqtt_topic_params_tmpl.to_dict(message.topic.value)
+                    #         setup_context_vars(mqtt_params.get('device_id'))
+                    #         await self.mqtt_message_handler(message)
+                    #     except RuntimeError as error:
+                    #         logger.error('Runtime error: %s', error)
+                    #     await asyncio.sleep(0.01)
 
             except aiomqtt.MqttError as error:
                 logger.warning(
@@ -194,6 +224,12 @@ class Connector:
                 await asyncio.sleep(RECONNECT_INTERVAL_SEC)
             finally:
                 await self.producer.stop()
+
+    async def handle(self, message):
+        mqtt_params = self.mqtt_topic_params_tmpl.to_dict(message.topic.value)
+        setup_context_vars(mqtt_params.get('device_id'))
+        await self.mqtt_message_handler(message)
+        await asyncio.sleep(0.01)
 
 
 def main():
