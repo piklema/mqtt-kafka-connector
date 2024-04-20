@@ -14,17 +14,17 @@ services:
     networks:
       - piklema-network
 
-  rabbitmq:
-    image: rabbitmq:management-alpine
-    ports:
-      - "18833:1883"
-      - "5672:5672"
-      - "15672:15672"
-      - "15675:15675"
-    command: "/bin/bash -c \"rabbitmq-plugins enable --offline rabbitmq_mqtt rabbitmq_web_mqtt rabbitmq_amqp1_0; rabbitmq-server\""
-    environment:
-      - RABBITMQ_DEFAULT_USER=admin
-      - RABBITMQ_DEFAULT_PASS=admin
+#  rabbitmq:
+#    image: rabbitmq:management-alpine
+#    ports:
+#      - "18833:1883"
+#      - "5672:5672"
+#      - "15672:15672"
+#      - "15675:15675"
+#    command: "/bin/bash -c \"rabbitmq-plugins enable --offline rabbitmq_mqtt rabbitmq_web_mqtt rabbitmq_amqp1_0; rabbitmq-server\""
+#    environment:
+#      - RABBITMQ_DEFAULT_USER=admin
+#      - RABBITMQ_DEFAULT_PASS=admin
 
 #    volumes:
 #      - type: bind

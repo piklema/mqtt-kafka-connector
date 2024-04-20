@@ -1,21 +1,64 @@
-from unittest import mock
-
-import pytest
-
-from mqtt_kafka_connector.clients.mqtt import MQTTClient
-from mqtt_kafka_connector.connector import Connector
 import asyncio
-from unittest import mock
-from unittest.mock import AsyncMock, MagicMock, patch
+import dataclasses
+import datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from dataclasses_avroschema import AvroModel
 
 from mqtt_kafka_connector.clients.kafka import KafkaProducer
-from mqtt_kafka_connector.conf import (
-    KAFKA_BOOTSTRAP_SERVERS,
-    MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS,
-    MODIFY_MESSAGE_RM_NONE_FIELDS,
+
+PAYLOAD = dict(
+    messages=[
+        dict(
+            time=1701955305760 // 1_000_000,
+            speed=45.67,
+            lat=12.3456,
+            lon=23.4567,
+        ),
+        dict(
+            time=1_600_000_000_111,
+            speed=45.68,
+            lat=12.3457,
+            lon=23.4568,
+        ),
+    ],
 )
+
+
+@dataclasses.dataclass
+class MessageModel(AvroModel):
+    time: datetime.datetime
+    speed: float
+    lat: float
+    lon: float
+
+
+@dataclasses.dataclass
+class MessagePack(AvroModel):
+    messages: list[MessageModel]
+
+
+class DummyResponse:
+    def __init__(self, status_code, data):
+        self.status_code = status_code
+        self.data = data
+
+    def json(self):
+        return self.data
+
+    def raise_for_status(self):
+        pass
+
+
+@pytest.fixture()
+def message_pack():
+    return MessagePack(**PAYLOAD)
+
+
+@pytest.fixture()
+def schema():
+    return MessagePack.generate_schema()
 
 
 @pytest.fixture(scope="module")
@@ -57,33 +100,14 @@ def kafka_producer(loop):
 
 
 @pytest.fixture
-async def mqtt_client(monkeypatch):
-    mock_message_data = 'mock_msg'
-    mock_client = mock.MagicMock()
+async def mqtt_client(monkeypatch, message_pack):
+    mock_client = MagicMock()
     mock_client.__aenter__.return_value = mock_client
-    mock_client.messages.__aiter__.return_value = iter([mock_message_data])
-    mock_client.subscribe = mock.AsyncMock()
+    mock_client.messages.__aiter__.return_value = iter(
+        [message_pack.serialize()]
+    )
+    mock_client.subscribe = AsyncMock()
 
-    mqtt_client = mock.MagicMock(return_value=mock_client)
+    mqtt_client = MagicMock(return_value=mock_client)
     monkeypatch.setattr("aiomqtt.Client", mqtt_client)
     return mqtt_client
-
-
-@pytest.fixture
-def conn():
-    conn = Connector()
-    conn.kafka_producer = mock.AsyncMock()
-
-    return conn
-
-
-class DummyResponse:
-    def __init__(self, status_code, data):
-        self.status_code = status_code
-        self.data = data
-
-    def json(self):
-        return self.data
-
-    def raise_for_status(self):
-        pass

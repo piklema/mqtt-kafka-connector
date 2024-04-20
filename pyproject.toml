@@ -22,10 +22,10 @@ tests_require = [
 [tool.coverage.report]
 show_missing = true
 skip_empty = true
-fail_under = 86
+fail_under = 89
 
 [tool.black]
-line-length = 128
+line-length = 79
 skip-string-normalization = true
 target-version = ['py310']
 

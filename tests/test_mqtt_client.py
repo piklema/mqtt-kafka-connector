@@ -1,7 +1,3 @@
-from unittest import mock
-
-import pytest
-
 from mqtt_kafka_connector.clients.mqtt import MQTTClient
 from mqtt_kafka_connector.conf import (
     MQTT_CLIENT_ID,
@@ -13,7 +9,7 @@ from mqtt_kafka_connector.conf import (
 )
 
 
-async def test_client(mqtt_client):
+async def test_client(mqtt_client, message_pack):
     mqtt_client_instance = MQTTClient()
 
     mqtt_client.assert_called_once_with(
@@ -27,7 +23,7 @@ async def test_client(mqtt_client):
     )
 
     async for mqtt_message in mqtt_client_instance.get_messages():
-        assert mqtt_message == 'mock_msg'
+        assert mqtt_message == message_pack.serialize()
 
     mqtt_client_instance.client.subscribe.assert_called_once_with(
         MQTT_TOPIC_SOURCE_MATCH, qos=1

@@ -3,36 +3,32 @@ import io
 import json
 import logging
 import sys
+import typing
 from collections import defaultdict
-import random
 
 import aiomqtt
 import fastavro
-import orjson
-from aiokafka import AIOKafkaProducer
-from kafka.errors import KafkaConnectionError
+from aiokafka.errors import KafkaConnectionError
+from aiomqtt.message import Message
 
-from mqtt_kafka_connector.clients.schema_client import schema_client
+from mqtt_kafka_connector.clients.kafka import KafkaProducer
+from mqtt_kafka_connector.clients.mqtt import MQTTClient
+from mqtt_kafka_connector.clients.schema_client import SchemaClient
 from mqtt_kafka_connector.conf import (
-    KAFKA_BOOTSTRAP_SERVERS,
     KAFKA_HEADERS_LIST,
     KAFKA_KEY_TEMPLATE,
-    MESSAGE_DESERIALIZE,
-    MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS,
-    MODIFY_MESSAGE_RM_NONE_FIELDS,
-    MQTT_CLIENT_ID,
-    MQTT_HOST,
-    MQTT_PASSWORD,
-    MQTT_PORT,
-    MQTT_TOPIC_SOURCE_MATCH,
+    KAFKA_SEND_BATCHES,
     MQTT_TOPIC_SOURCE_TEMPLATE,
-    MQTT_USER,
     RECONNECT_INTERVAL_SEC,
     TELEMETRY_KAFKA_TOPIC,
     TRACE_HEADER,
+    WITH_MESSAGE_DESERIALIZE,
 )
-from mqtt_kafka_connector.context_vars import message_uuid_var, setup_context_vars
-from mqtt_kafka_connector.utils import DateTimeEncoder, Template, clean_none_fields
+from mqtt_kafka_connector.context_vars import (
+    message_uuid_var,
+    setup_context_vars,
+)
+from mqtt_kafka_connector.utils import Template
 
 logger = logging.getLogger(__name__)
 
@@ -41,35 +37,17 @@ TopicHeaders = tuple[str, bytes, KafkaHeadersType]
 
 
 class Connector:
-    def __init__(self, message_deserialize: bool = False):
+    def __init__(
+        self,
+        mqtt_client: MQTTClient,
+        kafka_producer: KafkaProducer,
+        schema_client: SchemaClient,
+    ):
         self.mqtt_topic_params_tmpl = Template(MQTT_TOPIC_SOURCE_TEMPLATE)
-        self.header_names = KAFKA_HEADERS_LIST.split(',')
-        self.message_deserialize = message_deserialize
+        self.kafka_producer = kafka_producer
+        self.mqtt_client = mqtt_client
         self.schema_client = schema_client
-        self.producer: AIOKafkaProducer = None
         self.last_messages = defaultdict(dict)
-
-    def get_kafka_producer_params(
-        self,
-        mqtt_topic: str,
-    ) -> TopicHeaders | None:
-        """Get Kafka topic & headers from MQTT topic"""
-        if mqtt_topic_params := self.mqtt_topic_params_tmpl.to_dict(mqtt_topic):
-            kafka_topic = TELEMETRY_KAFKA_TOPIC.format(**mqtt_topic_params)
-            kafka_key = KAFKA_KEY_TEMPLATE.format(**mqtt_topic_params).encode()
-            kafka_headers = [(k, v.encode()) for k, v in mqtt_topic_params.items() if k in self.header_names]
-            return kafka_topic, kafka_key, kafka_headers
-
-    async def send_to_kafka(
-        self,
-        topic: str,
-        value: bytes,
-        key: bytes,
-        headers: list = None,
-    ) -> bool:
-        # await self.producer.send(topic, value=value, key=key, headers=headers)
-        logger.debug('Send to kafka %s %s %s %s', topic, key, value, headers)
-        return True
 
     async def deserialize(self, msg: aiomqtt.Message, schema_id: int) -> dict:
         schema = await self.schema_client.get_schema(schema_id)
@@ -88,153 +66,164 @@ class Connector:
 
         return data
 
-    async def mqtt_message_handler(self, message: aiomqtt.Message) -> bool:
-        mqtt_topic = message.topic
+    def check_telemetry_messages_pack(
+        self, mqtt_topic: str, telemetry_msg_pack: list
+    ) -> bool:
+        last_message = telemetry_msg_pack[-1]
+        messages_count = len(telemetry_msg_pack)
+
+        if self.last_messages[mqtt_topic] != last_message:
+            self.last_messages[mqtt_topic] = last_message
+        else:
+            logger.info(
+                'Message pack from %s already sending. Skip sending to kafka',
+                mqtt_topic,
+            )
+            return False
+
+        logger.info('Receive %s messages from %s', messages_count, mqtt_topic)
+        return True
+
+    async def get_telemetry_message_pack(
+        self,
+        mqtt_message: aiomqtt.Message,
+        schema_id: int,
+    ) -> typing.List[dict] | None:
+        mqtt_topic = mqtt_message.topic
+
         logger.debug(
             'Message received from mqtt_topic.value=%s message.payload=%s message.qos=%s',
             mqtt_topic.value,
-            message.payload,
-            message.qos,
+            mqtt_message.payload,
+            mqtt_message.qos,
         )
-        res = self.get_kafka_producer_params(mqtt_topic.value)
-        if res:
-            kafka_topic, kafka_key, kafka_headers = res
 
-            if self.message_deserialize:
-                kafka_headers.append(('message_deserialized', b'1'))
-                schema_id = int(dict(kafka_headers)['schema_id'])
-                msg_dict = await self.deserialize(message, schema_id)
-                messages = msg_dict['messages']
+        if WITH_MESSAGE_DESERIALIZE:
+            mqtt_msg_dict = await self.deserialize(mqtt_message, schema_id)
+            telemetry_msg_pack = mqtt_msg_dict['messages']
 
-            else:
-                data = message.payload
-                messages = json.loads(data.decode())['messages']
+        else:
+            data = mqtt_message.payload
+            telemetry_msg_pack = json.loads(data.decode())['messages']
 
-            if not messages:
-                logger.warning('Messages is empty')
-                return False
+        if not telemetry_msg_pack:
+            logger.warning('Messages is empty')
+            return
 
-            if TRACE_HEADER:
-                kafka_headers.append((TRACE_HEADER, message_uuid_var.get().encode()))
+        return telemetry_msg_pack
 
-            last_message = messages[-1]
-            messages_count = len(messages)
+    @staticmethod
+    def get_kafka_message_params(
+        mqtt_topic_params: dict,
+    ) -> TopicHeaders | None:
+        """Get Kafka topic & headers from MQTT topic"""
+        kafka_topic = TELEMETRY_KAFKA_TOPIC.format(**mqtt_topic_params)
+        kafka_key = KAFKA_KEY_TEMPLATE.format(**mqtt_topic_params).encode()
+        kafka_headers = [
+            (k, v.encode())
+            for k, v in mqtt_topic_params.items()
+            if k in KAFKA_HEADERS_LIST.split(',')
+        ]
 
-            if self.last_messages[mqtt_topic] != last_message:
-                self.last_messages[mqtt_topic] = last_message
-            else:
-                logger.info('Message is duplicate. Skip sending to kafka')
-                return False
+        if WITH_MESSAGE_DESERIALIZE:
+            kafka_headers.append(('message_deserialized', b'1'))
 
-            logger.info('Receive %s messages from %s', messages_count, mqtt_topic)
+        if TRACE_HEADER:
+            kafka_headers.append(
+                (TRACE_HEADER, message_uuid_var.get().encode())
+            )
 
-            # batch = self.producer.create_batch()
+        return kafka_topic, kafka_key, kafka_headers
 
-            for message in messages:
-                if MODIFY_MESSAGE_RM_NONE_FIELDS:
-                    message = clean_none_fields(message)
+    async def kafka_handler(
+        self,
+        messages: typing.List,
+        kafka_topic: str,
+        kafka_key: bytes,
+        kafka_headers: KafkaHeadersType,
+    ):
+        logger.info(
+            'Start send to kafka topic=%s, key=%s', kafka_topic, int(kafka_key)
+        )
 
-                # Implicit casting to JSON standard without NaN, Inf, -Inf values with orjson)
-                json_for_kafka = (
-                    orjson.dumps(message)
-                    if MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS
-                    else json.dumps(message, cls=DateTimeEncoder).encode()
-                )
-                # metadata = batch.append(key=kafka_key, value=json_for_kafka, headers=kafka_headers, timestamp=None)
-                #
-                # if metadata is None:
-                #     await self.send_batch(kafka_topic, batch)
-                #     batch = self.producer.create_batch()
-                #     continue
+        if KAFKA_SEND_BATCHES:
+            await self.kafka_producer.send_batch(
+                kafka_topic, kafka_headers, messages
+            )
 
-                await self.send_to_kafka(
+        else:
+            for msg in messages:
+                await self.kafka_producer.send(
                     kafka_topic,
-                    value=json_for_kafka,
+                    message=msg,
                     key=kafka_key,
                     headers=kafka_headers,
                 )
-            # await self.send_batch(kafka_topic, batch, 2)
 
-            return True
-
-        else:
-            logger.warning('Error prepare kafka topic from mqtt_topic.value=%s', mqtt_topic.value)
-            return False
-
-    async def send_batch(self, kafka_topic, batch, desc: str = 1):
-        partitions = await self.producer.partitions_for(kafka_topic)
-        partition = random.choice(tuple(partitions))
-        await self.producer.send_batch(batch, kafka_topic, partition=partition)
-        logger.info('Sent %s messages to kafka, partition %s, desc %s',batch.record_count(), partition, desc)
+        return True
 
     async def run(self):
         logger.info('MQTT Kafka connector starting...')
         while True:
             try:
-                self.producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS)
-                await self.producer.start()
+                await self.kafka_producer.start()
                 logger.info('Kafka Producer is running')
-                async with aiomqtt.Client(
-                    hostname=MQTT_HOST,
-                    port=MQTT_PORT,
-                    username=MQTT_USER,
-                    password=MQTT_PASSWORD,
-                    # client_id=MQTT_CLIENT_ID,
-                    identifier=MQTT_CLIENT_ID,
-                    clean_session=False,
-                    timeout=300,
-                    # transport='websockets',
-                ) as client:
-                    logger.info('MQTT Client is running')
-                    await client.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=1)
-                    async with asyncio.TaskGroup() as tg:
-                        async for message in client.messages:
-                            try:
-                                # mqtt_params = self.mqtt_topic_params_tmpl.to_dict(message.topic.value)
-                                # setup_context_vars(mqtt_params.get('device_id'))
-                                # await self.mqtt_message_handler(message)
-                                tg.create_task(self.handle(message))
 
-                            except RuntimeError as error:
-                                logger.error('Runtime error: %s', error)
+                async for mqtt_message in self.mqtt_client.get_messages():
+                    try:
+                        await self.handle(mqtt_message)
+                    except RuntimeError as err:
+                        logger.error('Runtime error: %s', err)
 
-                    # await client.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=1)
-                    # async for message in client.messages:
-                    #     try:
-                    #         mqtt_params = self.mqtt_topic_params_tmpl.to_dict(message.topic.value)
-                    #         setup_context_vars(mqtt_params.get('device_id'))
-                    #         await self.mqtt_message_handler(message)
-                    #     except RuntimeError as error:
-                    #         logger.error('Runtime error: %s', error)
-                    #     await asyncio.sleep(0.01)
-
-            except aiomqtt.MqttError as error:
+            except aiomqtt.MqttError as err:
                 logger.warning(
                     'MQTT connection error %s. ' 'Reconnecting in %s seconds.',
-                    error,
+                    err,
                     RECONNECT_INTERVAL_SEC,
                 )
                 await asyncio.sleep(RECONNECT_INTERVAL_SEC)
-            except KafkaConnectionError as error:
+            except KafkaConnectionError as err:
                 logger.warning(
-                    'Kafka connection error %s. ' 'Reconnecting in %s seconds.',
-                    error,
+                    'Kafka connection error %s. '
+                    'Reconnecting in %s seconds.',
+                    err,
                     RECONNECT_INTERVAL_SEC,
                 )
                 await asyncio.sleep(RECONNECT_INTERVAL_SEC)
             finally:
-                await self.producer.stop()
+                await self.kafka_producer.stop()
 
-    async def handle(self, message):
-        mqtt_params = self.mqtt_topic_params_tmpl.to_dict(message.topic.value)
+    async def handle(self, mqtt_message: Message):
+        mqtt_topic = mqtt_message.topic.value
+        mqtt_params = self.mqtt_topic_params_tmpl.to_dict(
+            mqtt_message.topic.value
+        )
+        kafka_topic, kafka_key, kafka_headers = self.get_kafka_message_params(
+            mqtt_params
+        )
+
         setup_context_vars(mqtt_params.get('device_id'))
-        await self.mqtt_message_handler(message)
-        await asyncio.sleep(0.01)
+        schema_id = int(dict(kafka_headers)['schema_id'])
+        telemetry_msg_pack = await self.get_telemetry_message_pack(
+            mqtt_message, schema_id
+        )
+        if self.check_telemetry_messages_pack(mqtt_topic, telemetry_msg_pack):
+            await self.kafka_handler(
+                telemetry_msg_pack, kafka_topic, kafka_key, kafka_headers
+            )
+
+        return True
 
 
 def main():
-    conn = Connector(message_deserialize=MESSAGE_DESERIALIZE)
-    asyncio.run(conn.run())
+    loop = asyncio.get_event_loop()
+
+    producer = KafkaProducer(loop)
+    mqtt_client = MQTTClient()
+    schema_client = SchemaClient()
+
+    connector = Connector(mqtt_client, producer, schema_client)
+    asyncio.run(connector.run())
 
 
 if __name__ == '__main__':

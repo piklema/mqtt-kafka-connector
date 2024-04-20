@@ -14,9 +14,13 @@ class BaseHTTPClient:
 
     async def request(self, url: str, method: str, **kwargs) -> dict:
         logger.info('HTTP request: %s %s %s', method, url, kwargs)
-        async with httpx.AsyncClient(headers=self.headers, timeout=1) as client:
+        async with httpx.AsyncClient(
+            headers=self.headers, timeout=1
+        ) as client:
             try:
-                resp = await getattr(client, method)(url, headers=self.headers, **kwargs)
+                resp = await getattr(client, method)(
+                    url, headers=self.headers, **kwargs
+                )
                 resp.raise_for_status()
                 resp_json = resp.json()
 
