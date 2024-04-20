@@ -49,9 +49,7 @@ async def test_lru(http_mock):
     data = {'test': 'test'}
     http_mock.return_value = DummyResponse(200, data)
 
-    client = SchemaClient(
-        # headers={'Authorization': 'Token 123'},
-    )
+    client = SchemaClient()
     res = await client.get_schema(1)
     assert res
     assert http_mock.call_count == 1
