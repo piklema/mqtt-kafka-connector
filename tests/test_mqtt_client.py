@@ -13,23 +13,10 @@ from mqtt_kafka_connector.conf import (
 )
 
 
-@pytest.fixture
-async def mock_mqtt_client(monkeypatch):
-    mock_message_data = 'mock_msg'
-    mock_client = mock.MagicMock()
-    mock_client.__aenter__.return_value = mock_client
-    mock_client.messages.__aiter__.return_value = iter([mock_message_data])
-    mock_client.subscribe = mock.AsyncMock()
+async def test_client(mqtt_client):
+    mqtt_client_instance = MQTTClient()
 
-    mqtt_client = mock.MagicMock(return_value=mock_client)
-    monkeypatch.setattr("aiomqtt.Client", mqtt_client)
-    return mqtt_client
-
-
-async def test_client(mock_mqtt_client):
-    mqtt_client = MQTTClient()
-
-    mock_mqtt_client.assert_called_once_with(
+    mqtt_client.assert_called_once_with(
         hostname=MQTT_HOST,
         port=MQTT_PORT,
         username=MQTT_USER,
@@ -39,9 +26,9 @@ async def test_client(mock_mqtt_client):
         timeout=300,
     )
 
-    async for mqtt_message in mqtt_client.get_messages():
+    async for mqtt_message in mqtt_client_instance.get_messages():
         assert mqtt_message == 'mock_msg'
 
-    mqtt_client.client.subscribe.assert_called_once_with(
+    mqtt_client_instance.client.subscribe.assert_called_once_with(
         MQTT_TOPIC_SOURCE_MATCH, qos=1
     )
