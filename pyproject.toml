@@ -1,21 +1,24 @@
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts = [
-    "-n", "auto",
-    "-p", "no:warnings"
-]
-plugins = ["pytest_asyncio", "pytest_mock"]
-asyncio_mode = 'auto'
+[project]
+# Support Python 3.10+.
+requires-python = '>=3.10'
 
-pythonpath = [
-    "src"
+[tool.pytest.ini_options]
+testpaths = ['tests']
+addopts = [
+    '-p', 'no:warnings'
 ]
+plugins = [
+    'pytest_asyncio',
+    'pytest_mock',
+]
+asyncio_mode = 'auto'
+pythonpath = ['src']
 filterwarnings = [
-    "ignore::DeprecationWarning",
-    "ignore::*PytestCollectionWarning*"
+    'ignore::DeprecationWarning',
+    'ignore::*PytestCollectionWarning*'
 ]
 tests_require = [
-    "develop"
+    'develop'
 ]
 
 
@@ -24,42 +27,26 @@ show_missing = true
 skip_empty = true
 fail_under = 89
 
-[tool.black]
+
+[tool.ruff]
 line-length = 79
-skip-string-normalization = true
-target-version = ['py310']
-
-[tool.isort]
-profile = "black"
-line_length = 128
-
-
-[tool.flake8]
-ignore = [
-    'E231',
-    'E241',
-    'W503',
-    'F841',
-    "E501", "E265", "F811", "BLK100", "T003", "E722", 'W503', 'E203', 'A003', 'PIE786', 'PIE803',
-    "C408",
-    "E999"
-]
-#per-file-ignores = [
-#    #    '__init__.py:F401',
-#]
-max-line-length = 128
-count = false
 exclude = [
-    ".git",
-    ".gitignore",
-    "*.pot",
-    "*.py[co]",
-    "__pycache__",
-    "venv",
-    ".env",
-    ".venv",
-    "versions",
+    '.git',
+    '.gitignore',
+    '*.pot',
+    '*.py[co]',
+    '__pycache__',
+    'venv',
+    '.env',
+    '.venv',
+    'versions',
     'static',
     'media',
-    'node_modules'
+    'node_modules',
+    'src/emulate'
 ]
+
+[tool.ruff.lint]
+extend-select = ['I', 'E', 'W', 'F']
+[tool.ruff.format]
+quote-style = 'single'

@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from dataclasses_avroschema import AvroModel
-
 from mqtt_kafka_connector.clients.kafka import KafkaProducer
 
 PAYLOAD = dict(
@@ -61,7 +60,7 @@ def schema():
     return MessagePack.generate_schema()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='module')
 def loop():
     try:
         loop = asyncio.get_running_loop()
@@ -109,5 +108,5 @@ async def mqtt_client(monkeypatch, message_pack):
     mock_client.subscribe = AsyncMock()
 
     mqtt_client = MagicMock(return_value=mock_client)
-    monkeypatch.setattr("aiomqtt.Client", mqtt_client)
+    monkeypatch.setattr('aiomqtt.Client', mqtt_client)
     return mqtt_client

@@ -1,9 +1,9 @@
 from unittest.mock import patch
 
 import pytest
-
 from mqtt_kafka_connector.clients.base_http import BaseHTTPClient
 from mqtt_kafka_connector.clients.schema_client import SchemaClient
+
 from tests.conftest import DummyResponse
 
 SCHEMA_URL = 'https://domain.com/api/v1/schemas'

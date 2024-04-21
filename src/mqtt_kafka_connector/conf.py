@@ -35,7 +35,8 @@ if WITH_MESSAGE_DESERIALIZE and not (
     SCHEMA_REGISTRY_URL and SCHEMA_REGISTRY_REQUEST_HEADERS
 ):
     raise Exception(
-        'SCHEMA_REGISTRY_URL and SCHEMA_REGISTRY_REQUEST_HEADERS must be set if WITH_MESSAGE_DESERIALIZE is True'
+        'SCHEMA_REGISTRY_URL and SCHEMA_REGISTRY_REQUEST_HEADERS '
+        'must be set if WITH_MESSAGE_DESERIALIZE is True'
     )
 
 SCHEMA_CACHE_TTL = int(os.getenv('SCHEMA_CACHE_TTL', 60) or 0)
@@ -85,7 +86,8 @@ LOGGING = {
     },
     'formatters': {
         'verbose': {
-            'format': '%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s:%(lineno)d - %(message)s',
+            'format': '%(asctime)s - [%(levelname)s] - %(name)s - '
+            '(%(filename)s).%(funcName)s:%(lineno)d - %(message)s',
         },
     },
     'handlers': {

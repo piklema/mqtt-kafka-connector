@@ -12,7 +12,7 @@ from mqtt_kafka_connector.conf import (
 logger = logging.getLogger(__name__)
 
 HEADERS = (
-    dict([h.split(":") for h in SCHEMA_REGISTRY_REQUEST_HEADERS.split(",")])
+    dict([h.split(':') for h in SCHEMA_REGISTRY_REQUEST_HEADERS.split(',')])
     if SCHEMA_REGISTRY_REQUEST_HEADERS
     else None
 )

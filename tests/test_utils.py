@@ -1,5 +1,4 @@
 from deepdiff import DeepDiff
-
 from mqtt_kafka_connector.utils import Template, clean_none_fields
 
 
@@ -22,18 +21,18 @@ def test_template_topic():
 async def test_clean_none():
     test_list = [None, 1, 2]
     test_dict = {
-        "a": 1,
-        "b": 0,
-        "c": 2,
-        "e": None,
+        'a': 1,
+        'b': 0,
+        'c': 2,
+        'e': None,
     }
 
     assert clean_none_fields(test_list) == [1, 2]
     assert not DeepDiff(
         clean_none_fields(test_dict),
         {
-            "a": 1,
-            "b": 0,
-            "c": 2,
+            'a': 1,
+            'b': 0,
+            'c': 2,
         },
     )

@@ -11,14 +11,14 @@ class DateTimeEncoder(JSONEncoder):
 
 
 class Template:
-    MASK_REGEXP = r"{(?P<tpl_name>\w+)}"
+    MASK_REGEXP = r'{(?P<tpl_name>\w+)}'
 
     def __init__(self, src_tpl: str):
         self.src_tpl = src_tpl  # Исходный шаблон
 
     def tpl_to_regex(self, tpl: str) -> str:
         """Заменить шаблоны вида {маска} на именованные регулярные выражения"""
-        return re.sub(self.MASK_REGEXP, r"(?P<\g<tpl_name>>.+)", tpl)
+        return re.sub(self.MASK_REGEXP, r'(?P<\g<tpl_name>>.+)', tpl)
 
     def to_topic(self, wildcard='+') -> str:
         """Заменить шаблоны вида {маска} на `wildcard`"""

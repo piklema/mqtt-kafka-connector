@@ -62,7 +62,7 @@ class Connector:
         except (IndexError, StopIteration, EOFError):
             raise RuntimeError('Message is not valid')
 
-        logger.debug("Message deserialized: data=%s", data)
+        logger.debug('Message deserialized: data=%s', data)
 
         return data
 
@@ -92,7 +92,8 @@ class Connector:
         mqtt_topic = mqtt_message.topic
 
         logger.debug(
-            'Message received from mqtt_topic.value=%s message.payload=%s message.qos=%s',
+            'Message received from '
+            'mqtt_topic.value=%s message.payload=%s message.qos=%s',
             mqtt_topic.value,
             mqtt_message.payload,
             mqtt_message.qos,

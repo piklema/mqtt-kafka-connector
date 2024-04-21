@@ -1,4 +1,4 @@
-.PHONY: clean clean-build clean-pyc clean-test coverage dist docs help install lint lint/flake8 lint/black
+.PHONY: clean clean-build clean-pyc clean-test coverage dist docs help install lint
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -48,16 +48,12 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
-lint/flake8: ## check style with flake8
-	flake8 src tests
-lint/black: ## check style with black
-	black --check src tests
-lint/isort:
-	isort --check-only src tests
 
-lint: lint/flake8 lint/black lint/isort ## check style
+lint: ## check style
+	ruff check
 
 test: ## run tests quickly with the default Python
+	set -a && source .env.example && set +a; \
 	pytest --cov --cov-report=term-missing -ra -q -s
 
 coverage: ## check code coverage quickly with the default Python
@@ -88,5 +84,3 @@ requirements_uninstall: ##
 requirements_install:  ##
 	@pip install -r ./requirements_dev.txt --quiet
 
-flake8_check: requirements_uninstall requirements_install ## проверка flake с синхронизацией пактов
-	@flake8

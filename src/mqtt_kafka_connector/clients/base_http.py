@@ -39,7 +39,7 @@ class BaseHTTPClient:
                 return resp_json
 
             except httpx.HTTPError as e:
-                logger.error("HTTPError: %s", e)
+                logger.error('HTTPError: %s', e)
 
             except JSONDecodeError as e:
                 logger.error('JSONDecodeError: %s', e)

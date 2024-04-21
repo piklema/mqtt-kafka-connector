@@ -32,7 +32,8 @@ class KafkaProducer:
         if MODIFY_MESSAGE_RM_NONE_FIELDS:
             raw_msg = clean_none_fields(raw_msg)
 
-        # Implicit casting to JSON standard without NaN, Inf, -Inf values with orjson)
+        # Implicit casting to JSON standard without
+        # NaN, Inf, -Inf values with orjson)
         msg_for_kafka = (
             orjson.dumps(raw_msg)
             if MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS
@@ -56,7 +57,7 @@ class KafkaProducer:
                     batch, topic, partition=partition
                 )
                 logger.info(
-                    "%s messages sent to partition %s",
+                    '%s messages sent to partition %s',
                     batch.record_count(),
                     partition,
                 )
@@ -68,7 +69,7 @@ class KafkaProducer:
         partition = random.choice(tuple(partitions))
         await self.producer.send_batch(batch, topic, partition=partition)
         logger.info(
-            "%s messages sent to partition %s", batch.record_count(), partition
+            '%s messages sent to partition %s', batch.record_count(), partition
         )
 
     async def send(

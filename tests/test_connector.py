@@ -1,7 +1,6 @@
 from unittest import mock
 
 from aiomqtt.message import Message
-
 from mqtt_kafka_connector.connector.main import Connector
 
 MQTT_TOPIC = 'customer/11111/dev/22222/v333333'
