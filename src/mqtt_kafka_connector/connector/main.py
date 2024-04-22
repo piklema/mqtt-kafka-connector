@@ -3,7 +3,6 @@ import io
 import json
 import logging
 import sys
-import typing
 from collections import defaultdict
 
 import aiomqtt
@@ -88,7 +87,7 @@ class Connector:
         self,
         mqtt_message: aiomqtt.Message,
         schema_id: int,
-    ) -> typing.List[dict] | None:
+    ) -> list[dict] | None:
         mqtt_topic = mqtt_message.topic
 
         logger.debug(
@@ -138,7 +137,7 @@ class Connector:
 
     async def kafka_handler(
         self,
-        messages: typing.List,
+        messages: list,
         kafka_topic: str,
         kafka_key: bytes,
         kafka_headers: KafkaHeadersType,
