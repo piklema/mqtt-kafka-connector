@@ -41,14 +41,20 @@ class KafkaProducer:
         )
         return msg_for_kafka
 
-    async def send_batch(self, topic, headers, messages: list):
+    async def send_batch(
+        self,
+        topic: str,
+        messages: list[dict],
+        key: bytes,
+        headers: list,
+    ):
         batch = self.producer.create_batch()
 
         i = 0
         while i < len(messages):
             msg = self._prepare_msg_for_kafka(messages[i])
             metadata = batch.append(
-                key=None, value=msg, timestamp=None, headers=headers
+                key=key, value=msg, timestamp=None, headers=headers
             )
             if metadata is None:
                 partitions = await self.producer.partitions_for(topic)

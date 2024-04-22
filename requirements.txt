@@ -16,7 +16,7 @@ certifi==2024.2.2
     #   sentry-sdk
 dacite==1.8.1
     # via dataclasses-avroschema
-dataclasses-avroschema==0.58.2
+dataclasses-avroschema==0.59.0
 fastavro==1.9.4
     # via dataclasses-avroschema
 h11==0.14.0

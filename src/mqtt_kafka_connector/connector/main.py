@@ -148,7 +148,10 @@ class Connector:
 
         if KAFKA_SEND_BATCHES:
             await self.kafka_producer.send_batch(
-                kafka_topic, kafka_headers, messages
+                kafka_topic,
+                messages,
+                kafka_key,
+                kafka_headers,
             )
 
         else:
@@ -198,11 +201,11 @@ class Connector:
         mqtt_params = self.mqtt_topic_params_tmpl.to_dict(
             mqtt_message.topic.value
         )
+        setup_context_vars(mqtt_params.get('device_id'))
+
         kafka_topic, kafka_key, kafka_headers = self.get_kafka_message_params(
             mqtt_params
         )
-
-        setup_context_vars(mqtt_params.get('device_id'))
         schema_id = int(dict(kafka_headers)['schema_id'])
         telemetry_msg_pack = await self.get_telemetry_message_pack(
             mqtt_message, schema_id
