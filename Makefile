@@ -52,6 +52,9 @@ clean-test: ## remove test and coverage artifacts
 lint: ## check style
 	ruff check
 
+format: ## format style
+	ruff format
+
 test: ## run tests quickly with the default Python
 	set -a && source .env.example && set +a; \
 	pytest --cov --cov-report=term-missing -ra -q -s
