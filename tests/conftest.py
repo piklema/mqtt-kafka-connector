@@ -7,8 +7,10 @@ import pytest
 from dataclasses_avroschema import AvroModel
 from mqtt_kafka_connector.clients.kafka import KafkaProducer
 
-PAYLOAD = dict(
-    messages=[
+
+@pytest.fixture()
+def payload():
+    return dict(messages=[
         dict(
             time=1_701_955_305_760,
             speed=10.00,
@@ -16,7 +18,7 @@ PAYLOAD = dict(
             lon=22.3333,
         ),
         dict(
-            time=1_700_000_000_111,
+            time=1_600_000_000_111,
             speed=33.00,
             lat=55.5555,
             lon=77.9999,
@@ -51,8 +53,8 @@ class DummyResponse:
 
 
 @pytest.fixture()
-def message_pack():
-    return MessagePack(**PAYLOAD)
+def message_pack(payload):
+    return MessagePack(**payload)
 
 
 @pytest.fixture()
