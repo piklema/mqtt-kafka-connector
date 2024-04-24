@@ -122,7 +122,7 @@ class Connector:
             if self.last_messages[mqtt_topic] != last_message:
                 self.last_messages[mqtt_topic] = last_message
             else:
-                logger.warning('Message is duplicate. Skip sending to kafka')
+                logger.info('Message is duplicate. Skip sending to kafka')
                 return False
 
             logger.info('Start sending %s messages to kafka', messages_count)
