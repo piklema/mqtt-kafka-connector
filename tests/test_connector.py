@@ -14,9 +14,16 @@ MQTT_TOPIC = f'customer/11111/dev/{DEVICE_ID}/v{SCHEMA_ID}'
 
 @mock.patch('httpx.AsyncClient.request')
 async def test_connector(
-    schema_client, mqtt_client, kafka_producer, message_pack, schema
+    schema_client,
+    mqtt_client,
+    kafka_producer,
+    message_pack,
+    schema,
+    prometheus,
 ):
-    connector = Connector(mqtt_client, kafka_producer, schema_client)
+    connector = Connector(
+        mqtt_client, kafka_producer, schema_client, prometheus
+    )
     schema_client.get_schema.return_value = schema
     message = Message(
         topic=MQTT_TOPIC,

@@ -9,8 +9,6 @@ import aiomqtt
 import fastavro
 from aiokafka.errors import KafkaConnectionError
 from aiomqtt.message import Message
-from aioprometheus import Counter
-from aioprometheus.service import Service
 
 from mqtt_kafka_connector.clients.kafka import KafkaProducer
 from mqtt_kafka_connector.clients.mqtt import MQTTClient
@@ -29,6 +27,7 @@ from mqtt_kafka_connector.context_vars import (
     message_uuid_var,
     setup_context_vars,
 )
+from mqtt_kafka_connector.services.prometheus import Prometheus
 from mqtt_kafka_connector.utils import Template
 
 logger = logging.getLogger(__name__)
@@ -43,17 +42,15 @@ class Connector:
         mqtt_client: MQTTClient,
         kafka_producer: KafkaProducer,
         schema_client: SchemaClient,
+        prometheus_service: Prometheus,
     ):
-        self.mqtt_topic_params_tmpl = Template(MQTT_TOPIC_SOURCE_TEMPLATE)
         self.kafka_producer = kafka_producer
         self.mqtt_client = mqtt_client
         self.schema_client = schema_client
-        self.last_messages = defaultdict(dict)
+        self.prometheus = prometheus_service
 
-        self.prometheus_service = Service()
-        self.messages_counter = Counter(
-            'messages_count', 'Number of messages.'
-        )
+        self.mqtt_topic_params_tmpl = Template(MQTT_TOPIC_SOURCE_TEMPLATE)
+        self.last_messages = defaultdict(dict)
 
     async def deserialize(self, msg: aiomqtt.Message, schema_id: int) -> dict:
         schema = await self.schema_client.get_schema(schema_id)
@@ -173,14 +170,12 @@ class Connector:
         return True
 
     async def run(self):
-        logger.info('MQTT Kafka connector starting...')
+        logger.info('Connector starting...')
         while True:
             try:
+                await self.mqtt_client.start()
                 await self.kafka_producer.start()
-                logger.info('Kafka Producer is running')
-
-                await self.prometheus_service.start(addr='0.0.0.0', port=8011)
-                logger.info('Prometheus service is running')
+                await self.prometheus.start()
 
                 async for mqtt_message in self.mqtt_client.get_messages():
                     try:
@@ -205,7 +200,7 @@ class Connector:
                 await asyncio.sleep(RECONNECT_INTERVAL_SEC)
             finally:
                 await self.kafka_producer.stop()
-                await self.prometheus_service.stop()
+                await self.prometheus.service.stop()
 
     async def handle(self, mqtt_message: Message):
         mqtt_topic = mqtt_message.topic.value
@@ -226,12 +221,9 @@ class Connector:
             await self.kafka_handler(
                 telemetry_msg_pack, kafka_topic, kafka_key, kafka_headers
             )
-
-            self.messages_counter.add(
-                {
-                    'device_id': device_id,
-                    'customer_id': mqtt_params.get('customer_id'),
-                },
+            self.prometheus.add(
+                device_id,
+                mqtt_params.get('customer_id'),
                 len(telemetry_msg_pack),
             )
 
@@ -239,13 +231,11 @@ class Connector:
 
 
 def main():
-    loop = asyncio.get_event_loop()
-
-    producer = KafkaProducer(loop)
+    producer = KafkaProducer()
     mqtt_client = MQTTClient()
     schema_client = SchemaClient()
-
-    connector = Connector(mqtt_client, producer, schema_client)
+    prometheus = Prometheus()
+    connector = Connector(mqtt_client, producer, schema_client, prometheus)
     asyncio.run(connector.run())
 
 

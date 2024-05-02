@@ -52,6 +52,7 @@ MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS = strtobool(
     os.getenv('MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS', 'False')
 )
 KAFKA_SEND_BATCHES = strtobool(os.getenv('KAFKA_SEND_BATCHES', 'False'))
+PROMETHEUS_PORT = int(os.getenv('PROMETHEUS_PORT', 8011))
 
 if SENTRY_DSN:
     sentry_sdk.init(

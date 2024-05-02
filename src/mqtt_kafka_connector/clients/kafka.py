@@ -16,13 +16,15 @@ logger = logging.getLogger(__name__)
 
 
 class KafkaProducer:
-    def __init__(self, loop):
-        self.producer = AIOKafkaProducer(
-            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS, loop=loop
-        )
+    def __init__(self):
+        self.producer = None
 
     async def start(self):
+        self.producer = AIOKafkaProducer(
+            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        )
         await self.producer.start()
+        logger.info('Kafka Producer is running')
 
     async def stop(self):
         await self.producer.stop()

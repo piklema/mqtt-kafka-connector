@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 class MQTTClient:
     def __init__(self):
+        self.client = None
+
+    async def start(self):
         self.client = aiomqtt.Client(
             hostname=MQTT_HOST,
             port=MQTT_PORT,
@@ -26,10 +29,10 @@ class MQTTClient:
             clean_session=False,
             timeout=300,
         )
+        logger.info('MQTT Client is running')
 
     async def get_messages(self) -> typing.AsyncIterator[aiomqtt.Message]:
         async with self.client as cli:
-            logger.info('MQTT Client is running')
             await cli.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=1)
             async for mqtt_message in cli.messages:
                 yield mqtt_message

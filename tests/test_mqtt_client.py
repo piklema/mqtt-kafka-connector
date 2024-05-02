@@ -11,7 +11,7 @@ from mqtt_kafka_connector.conf import (
 
 async def test_client(mqtt_client, message_pack):
     mqtt_client_instance = MQTTClient()
-
+    await mqtt_client_instance.start()
     mqtt_client.assert_called_once_with(
         hostname=MQTT_HOST,
         port=MQTT_PORT,
