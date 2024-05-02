@@ -51,7 +51,9 @@ class Connector:
         self.last_messages = defaultdict(dict)
 
         self.prometheus_service = Service()
-        self.messages_counter = Counter('messages_count', 'Number of messages.')
+        self.messages_counter = Counter(
+            'messages_count', 'Number of messages.'
+        )
 
     async def deserialize(self, msg: aiomqtt.Message, schema_id: int) -> dict:
         schema = await self.schema_client.get_schema(schema_id)
@@ -221,7 +223,6 @@ class Connector:
             mqtt_message, schema_id
         )
         if self.check_telemetry_messages_pack(mqtt_topic, telemetry_msg_pack):
-
             await self.kafka_handler(
                 telemetry_msg_pack, kafka_topic, kafka_key, kafka_headers
             )
