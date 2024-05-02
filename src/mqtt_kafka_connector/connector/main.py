@@ -9,6 +9,8 @@ import aiomqtt
 import fastavro
 from aiokafka.errors import KafkaConnectionError
 from aiomqtt.message import Message
+from aioprometheus import Counter
+from aioprometheus.service import Service
 
 from mqtt_kafka_connector.clients.kafka import KafkaProducer
 from mqtt_kafka_connector.clients.mqtt import MQTTClient
@@ -47,6 +49,9 @@ class Connector:
         self.mqtt_client = mqtt_client
         self.schema_client = schema_client
         self.last_messages = defaultdict(dict)
+
+        self.prometheus_service = Service()
+        self.messages_counter = Counter('messages_count', 'Number of messages.')
 
     async def deserialize(self, msg: aiomqtt.Message, schema_id: int) -> dict:
         schema = await self.schema_client.get_schema(schema_id)
@@ -172,6 +177,9 @@ class Connector:
                 await self.kafka_producer.start()
                 logger.info('Kafka Producer is running')
 
+                await self.prometheus_service.start(addr='0.0.0.0', port=8011)
+                logger.info('Prometheus service is running')
+
                 async for mqtt_message in self.mqtt_client.get_messages():
                     try:
                         await self.handle(mqtt_message)
@@ -195,13 +203,15 @@ class Connector:
                 await asyncio.sleep(RECONNECT_INTERVAL_SEC)
             finally:
                 await self.kafka_producer.stop()
+                await self.prometheus_service.stop()
 
     async def handle(self, mqtt_message: Message):
         mqtt_topic = mqtt_message.topic.value
         mqtt_params = self.mqtt_topic_params_tmpl.to_dict(
             mqtt_message.topic.value
         )
-        setup_context_vars(mqtt_params.get('device_id'))
+        device_id = mqtt_params.get('device_id')
+        setup_context_vars(device_id)
 
         kafka_topic, kafka_key, kafka_headers = self.get_kafka_message_params(
             mqtt_params
@@ -211,8 +221,17 @@ class Connector:
             mqtt_message, schema_id
         )
         if self.check_telemetry_messages_pack(mqtt_topic, telemetry_msg_pack):
+
             await self.kafka_handler(
                 telemetry_msg_pack, kafka_topic, kafka_key, kafka_headers
+            )
+
+            self.messages_counter.add(
+                {
+                    'device_id': device_id,
+                    'customer_id': mqtt_params.get('customer_id'),
+                },
+                len(telemetry_msg_pack),
             )
 
         return True

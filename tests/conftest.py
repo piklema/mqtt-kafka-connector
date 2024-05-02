@@ -10,21 +10,22 @@ from mqtt_kafka_connector.clients.kafka import KafkaProducer
 
 @pytest.fixture()
 def payload():
-    return dict(messages=[
-        dict(
-            time=1_701_955_305_760,
-            speed=10.00,
-            lat=11.2222,
-            lon=22.3333,
-        ),
-        dict(
-            time=1_600_000_000_111,
-            speed=33.00,
-            lat=55.5555,
-            lon=77.9999,
-        ),
-    ],
-)
+    return dict(
+        messages=[
+            dict(
+                time=1_701_955_305_760,
+                speed=10.00,
+                lat=11.2222,
+                lon=22.3333,
+            ),
+            dict(
+                time=1_600_000_000_111,
+                speed=33.00,
+                lat=55.5555,
+                lon=77.9999,
+            ),
+        ],
+    )
 
 
 @dataclasses.dataclass

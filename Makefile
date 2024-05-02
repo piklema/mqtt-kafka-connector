@@ -53,7 +53,7 @@ lint: ## check style
 	ruff check
 
 format: ## format style
-	ruff check --fix
+	ruff format && ruff check --fix
 
 test: ## run tests quickly with the default Python
 	set -a && source .env.example && set +a; \

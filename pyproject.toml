@@ -44,5 +44,6 @@ exclude = [
 
 [tool.ruff.lint]
 extend-select = ['I', 'E', 'W', 'F']
+
 [tool.ruff.format]
 quote-style = 'single'
