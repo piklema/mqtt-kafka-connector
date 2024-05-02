@@ -65,7 +65,7 @@ class KafkaProducer:
                     batch, topic, partition=partition
                 )
                 logger.info(
-                    '%s messages sent to partition %s',
+                    'Sent batch %s messages sent to partition %s',
                     batch.record_count(),
                     partition,
                 )
@@ -77,7 +77,8 @@ class KafkaProducer:
         partition = random.choice(tuple(partitions))
         await self.producer.send_batch(batch, topic, partition=partition)
         logger.info(
-            '%s messages sent to partition %s', batch.record_count(), partition
+            'Sent batch %s messages to partition %s',
+            batch.record_count(), partition
         )
 
     async def send(
