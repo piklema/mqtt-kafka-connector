@@ -2,7 +2,7 @@ async def test_send_batch(kafka_producer):
     await kafka_producer.send_batch(
         'topic',
         ['message1', 'message2'],
-        'key',
+        '1',
         'headers',
     )
 

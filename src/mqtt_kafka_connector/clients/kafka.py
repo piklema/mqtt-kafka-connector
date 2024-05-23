@@ -1,6 +1,5 @@
 import json
 import logging
-import random
 
 import orjson
 from aiokafka import AIOKafkaProducer
@@ -43,6 +42,10 @@ class KafkaProducer:
         )
         return msg_for_kafka
 
+    async def get_partition(self, topic: str, key: bytes) -> int:
+        partitions = await self.producer.partitions_for(topic)
+        return int(key) % len(partitions)
+
     async def send_batch(
         self,
         topic: str,
@@ -59,8 +62,7 @@ class KafkaProducer:
                 key=key, value=msg, timestamp=None, headers=headers
             )
             if metadata is None:
-                partitions = await self.producer.partitions_for(topic)
-                partition = random.choice(tuple(partitions))
+                partition = await self.get_partition(topic, key)
                 await self.producer.send_batch(
                     batch, topic, partition=partition
                 )
@@ -73,12 +75,12 @@ class KafkaProducer:
                 continue
             i += 1
 
-        partitions = await self.producer.partitions_for(topic)
-        partition = random.choice(tuple(partitions))
+        partition = await self.get_partition(topic, key)
         await self.producer.send_batch(batch, topic, partition=partition)
         logger.info(
             'Sent batch %s messages to partition %s',
-            batch.record_count(), partition
+            batch.record_count(),
+            partition,
         )
 
     async def send(
