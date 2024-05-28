@@ -11,7 +11,7 @@ class Prometheus:
     def __init__(self):
         self.service = None
         self.messages_counter = Counter(
-            'messages_count', 'Number of messages.'
+            'mqtt_to_kafka_messages_count', 'Number of messages.'
         )
 
     async def start(self):
