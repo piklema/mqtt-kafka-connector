@@ -16,7 +16,7 @@ async def test_send(kafka_producer):
         'topic', {'message': 'test'}, b'key', [('header', b'value')]
     )
 
-    kafka_producer.producer.send.assert_called_with(
+    kafka_producer.producer.send_and_wait.assert_called_with(
         'topic',
         value=kafka_producer._prepare_msg_for_kafka({'message': 'test'}),
         key=b'key',

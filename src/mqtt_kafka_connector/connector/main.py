@@ -173,9 +173,9 @@ class Connector:
         logger.info('Connector starting...')
         while True:
             try:
+                await self.prometheus.start()
                 await self.mqtt_client.start()
                 await self.kafka_producer.start()
-                await self.prometheus.start()
 
                 async for mqtt_message in self.mqtt_client.get_messages():
                     try:

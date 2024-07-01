@@ -23,7 +23,7 @@ async def test_client(mqtt_client, message_pack):
     )
 
     async for mqtt_message in mqtt_client_instance.get_messages():
-        assert mqtt_message == message_pack.serialize()
+        assert mqtt_message.payload == message_pack.serialize()
 
     mqtt_client_instance.client.subscribe.assert_called_once_with(
         MQTT_TOPIC_SOURCE_MATCH, qos=1

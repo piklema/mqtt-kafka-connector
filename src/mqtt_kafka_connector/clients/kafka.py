@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 
 class KafkaProducer:
     def __init__(self):
-        self.producer = None
+        self.producer: AIOKafkaProducer = None
 
     async def start(self):
-        self.producer = AIOKafkaProducer(
+        self.producer: AIOKafkaProducer = AIOKafkaProducer(
             bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
         )
         await self.producer.start()
@@ -63,24 +63,26 @@ class KafkaProducer:
             )
             if metadata is None:
                 partition = await self.get_partition(topic, key)
-                await self.producer.send_batch(
+                fut = await self.producer.send_batch(
                     batch, topic, partition=partition
                 )
+                res = await fut
                 logger.info(
                     'Sent batch %s messages sent to partition %s',
                     batch.record_count(),
-                    partition,
+                    res.partition,
                 )
                 batch = self.producer.create_batch()
                 continue
             i += 1
 
         partition = await self.get_partition(topic, key)
-        await self.producer.send_batch(batch, topic, partition=partition)
+        fut = await self.producer.send_batch(batch, topic, partition=partition)
+        res = await fut
         logger.info(
             'Sent batch %s messages to partition %s',
             batch.record_count(),
-            partition,
+            res.partition,
         )
 
     async def send(
@@ -91,9 +93,10 @@ class KafkaProducer:
         headers: list,
     ) -> bool:
         value = self._prepare_msg_for_kafka(message)
-        fut = await self.producer.send(
+        res = await self.producer.send_and_wait(
             topic, value=value, key=key, headers=headers
         )
-        res = await fut
-        logger.info('1 message sent to partition %s', res.partition)
+        logger.info(
+            '1 message sent with key %s to partition %s', key, res.partition
+        )
         return True

@@ -1,8 +1,10 @@
+import asyncio
 import dataclasses
 import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from aiomqtt.message import Message
 from dataclasses_avroschema import AvroModel
 from mqtt_kafka_connector.clients.kafka import KafkaProducer
 from mqtt_kafka_connector.services.prometheus import Prometheus
@@ -75,16 +77,15 @@ def kafka_producer():
         'metadata',
     ]
     mock_producer.partitions_for = AsyncMock(return_value=[0])
-    mock_producer.send_batch = AsyncMock()
 
-    async def send_result():
-        res = MagicMock()
-        res.partition = 0
-        return res
+    res = MagicMock()
+    res.partition = 1
 
-    mock_producer.send = AsyncMock(
-        return_value=True, side_effect=[send_result()]
-    )
+    mock_producer.send_batch.return_value = asyncio.Future()
+    mock_producer.send_batch.return_value.set_result(res)
+
+    mock_producer.send_and_wait = AsyncMock()
+    mock_producer.send_and_wait.return_value = res
 
     kafka_producer = KafkaProducer()
     kafka_producer.producer = mock_producer
@@ -96,7 +97,16 @@ async def mqtt_client(monkeypatch, message_pack):
     mock_client = MagicMock()
     mock_client.__aenter__.return_value = mock_client
     mock_client.messages.__aiter__.return_value = iter(
-        [message_pack.serialize()]
+        [
+            Message(
+                'topic',
+                payload=message_pack.serialize(),
+                qos=1,
+                retain=True,
+                mid=1,
+                properties=None,
+            )
+        ]
     )
     mock_client.subscribe = AsyncMock()
 
