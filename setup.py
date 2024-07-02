@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-""""The setup script."""
+"""The setup script."""
 
 from setuptools import find_packages, setup
 
@@ -26,12 +26,11 @@ setup(
     entry_points={
         'console_scripts': [
             'mqtt_kafka_connector=mqtt_kafka_connector.connector.main:main',
-            'send_test_data=mqtt_kafka_connector.emu.main:main',
         ],
     },
     install_requires=requirements,
     long_description=readme,
-    include_package_data=False,
+    include_package_data=True,
     keywords='mqtt_kafka_connector',
     name='mqtt_kafka_connector',
     packages=find_packages(
