@@ -11,24 +11,24 @@ from mqtt_kafka_connector.services.prometheus import Prometheus
 
 
 @pytest.fixture()
-def time_now():
+def now_timestamp():
     return int(
         datetime.datetime.now(datetime.timezone.utc).timestamp() * 1_000
     )
 
 
 @pytest.fixture()
-def payload(time_now):
+def payload(now_timestamp):
     return dict(
         messages=[
             dict(
-                time=time_now,
+                time=now_timestamp,
                 speed=10.00,
                 lat=11.2222,
                 lon=22.3333,
             ),
             dict(
-                time=time_now,
+                time=now_timestamp,
                 speed=33.00,
                 lat=55.5555,
                 lon=77.9999,
@@ -68,7 +68,7 @@ def message_pack(payload):
 
 
 @pytest.fixture()
-def unpack_message_pack(payload, time_now):
+def unpack_message_pack(payload, now_timestamp):
     return [{'time': datetime.datetime.now()}] * 2
 
 
