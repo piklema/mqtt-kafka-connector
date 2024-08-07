@@ -1,4 +1,3 @@
-import copy
 import datetime as dt
 import json
 import logging
@@ -33,7 +32,7 @@ class KafkaProducer:
 
     @staticmethod
     def _check_message_interval(msg: dict) -> bool:
-        msg_time = copy.deepcopy(msg['time']).astimezone(dt.timezone.utc)
+        msg_time = msg['time'].astimezone(dt.timezone.utc)
         now_utc = dt.datetime.now(dt.timezone.utc)
         early = now_utc - dt.timedelta(hours=MIN_TELEMETRY_INTERVAL_AGE_HOURS)
         late = now_utc + dt.timedelta(hours=MIN_TELEMETRY_INTERVAL_AGE_HOURS)
