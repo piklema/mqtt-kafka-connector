@@ -60,9 +60,7 @@ class KafkaProducer:
                 return None
 
         except Exception as e:
-            logger.error(
-                'Error while preparing message for Kafka: %s', e, exc_info=True
-            )
+            logger.exception('Error while preparing message for Kafka: %s', e)
             return None
         return msg_for_kafka
 
