@@ -11,17 +11,24 @@ from mqtt_kafka_connector.services.prometheus import Prometheus
 
 
 @pytest.fixture()
-def payload():
+def time_now():
+    return int(
+        datetime.datetime.now(datetime.timezone.utc).timestamp() * 1_000
+    )
+
+
+@pytest.fixture()
+def payload(time_now):
     return dict(
         messages=[
             dict(
-                time=1_701_955_305_760,
+                time=time_now,
                 speed=10.00,
                 lat=11.2222,
                 lon=22.3333,
             ),
             dict(
-                time=1_600_000_000_111,
+                time=time_now,
                 speed=33.00,
                 lat=55.5555,
                 lon=77.9999,
@@ -58,6 +65,11 @@ class DummyResponse:
 @pytest.fixture()
 def message_pack(payload):
     return MessagePack(**payload)
+
+
+@pytest.fixture()
+def unpack_message_pack(payload, time_now):
+    return [{'time': datetime.datetime.now()}] * 2
 
 
 @pytest.fixture()
