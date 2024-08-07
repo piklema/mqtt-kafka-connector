@@ -7,6 +7,7 @@ from aiokafka import AIOKafkaProducer
 
 from mqtt_kafka_connector.conf import (
     KAFKA_BOOTSTRAP_SERVERS,
+    MAX_TELEMETRY_INTERVAL_AGE_HOURS,
     MIN_TELEMETRY_INTERVAL_AGE_HOURS,
     MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS,
     MODIFY_MESSAGE_RM_NONE_FIELDS,
@@ -35,7 +36,7 @@ class KafkaProducer:
         msg_time = msg['time'].astimezone(dt.timezone.utc)
         now_utc = dt.datetime.now(dt.timezone.utc)
         early = now_utc - dt.timedelta(hours=MIN_TELEMETRY_INTERVAL_AGE_HOURS)
-        late = now_utc + dt.timedelta(hours=MIN_TELEMETRY_INTERVAL_AGE_HOURS)
+        late = now_utc + dt.timedelta(hours=MAX_TELEMETRY_INTERVAL_AGE_HOURS)
 
         if not early <= msg_time <= late:
             logger.warning('Message time is out of interval')
