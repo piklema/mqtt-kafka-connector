@@ -1,3 +1,5 @@
+import copy
+import datetime as dt
 import json
 import logging
 
@@ -31,25 +33,15 @@ class KafkaProducer:
 
     @staticmethod
     def _check_message_interval(msg: dict):
-        if MIN_TELEMETRY_INTERVAL_AGE_HOURS:
-            import copy
-            import datetime as dt
+        msg_time = copy.deepcopy(msg['time']).astimezone(dt.timezone.utc)
+        now_utc = dt.datetime.now(dt.timezone.utc)
+        early = now_utc - dt.timedelta(hours=MIN_TELEMETRY_INTERVAL_AGE_HOURS)
+        late = now_utc + dt.timedelta(hours=MIN_TELEMETRY_INTERVAL_AGE_HOURS)
 
-            msg_time = copy.deepcopy(msg['time']).astimezone(dt.timezone.utc)
-            now_utc = dt.datetime.now(dt.timezone.utc)
-            early = now_utc - dt.timedelta(
-                hours=MIN_TELEMETRY_INTERVAL_AGE_HOURS
-            )
-            late = now_utc + dt.timedelta(hours=1)
-
-            if not early <= msg_time <= late:
-                logger.warning(
-                    'Message with time %s is older than %s hours, skipping',
-                    msg['time'],
-                    MIN_TELEMETRY_INTERVAL_AGE_HOURS,
-                )
-                return False
-            return True
+        if not early <= msg_time <= late:
+            logger.warning('Message time is out of interval')
+            return False
+        return True
 
     def _prepare_msg_for_kafka(self, raw_msg: dict) -> bytes | None:
         try:
@@ -71,7 +63,7 @@ class KafkaProducer:
             logger.error(
                 'Error while preparing message for Kafka: %s', e, exc_info=True
             )
-            return
+            return None
         return msg_for_kafka
 
     async def get_partition(self, topic: str, key: bytes) -> int:
