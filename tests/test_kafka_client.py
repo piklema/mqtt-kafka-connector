@@ -20,14 +20,16 @@ async def test_send_batch(kafka_producer, unpack_message_pack):
     kafka_producer.producer.send_batch.assert_called()
 
 
-async def test_send(kafka_producer, message_pack):
+async def test_send(kafka_producer, unpack_message_pack):
     result = await kafka_producer.send(
-        'topic', message_pack, b'key', [('header', b'value')]
+        'topic', unpack_message_pack[0], b'key', [('header', b'value')]
     )
 
     kafka_producer.producer.send_and_wait.assert_called_with(
         'topic',
-        value=kafka_producer._prepare_msg_for_kafka(message_pack),
+        value=kafka_producer.message_helper.prepare_msg_for_kafka(
+            unpack_message_pack[0]
+        ),
         key=b'key',
         headers=[('header', b'value')],
     )
@@ -48,8 +50,15 @@ async def test_send(kafka_producer, message_pack):
             + dt.timedelta(hours=1, minutes=MAX_TELEMETRY_INTERVAL_AGE_HOURS),
             False,
         ),
+        (
+            None,
+            False,
+        ),
     ],
 )
 async def test_check_message_interval(kafka_producer, time, expected):
     message = {'time': time}
-    assert kafka_producer._check_message_interval(message) is expected
+    assert (
+        kafka_producer.message_helper._check_message_interval(message)
+        is expected
+    )

@@ -5,8 +5,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from aiomqtt.message import Message
+from aioprometheus import REGISTRY
 from dataclasses_avroschema import AvroModel
-from mqtt_kafka_connector.clients.kafka import KafkaProducer
+from mqtt_kafka_connector.clients.kafka import KafkaProducer, MessageHelper
 from mqtt_kafka_connector.services.prometheus import Prometheus
 
 
@@ -77,8 +78,17 @@ def schema():
     return MessagePack.generate_schema()
 
 
+@pytest.fixture
+async def prometheus():
+    service = Prometheus()
+    service.start = AsyncMock()
+    service._add = MagicMock()
+    yield service
+    REGISTRY.clear()
+
+
 @pytest.fixture()
-def kafka_producer():
+def kafka_producer(prometheus):
     mock_producer = AsyncMock()
     mock_producer.start = AsyncMock()
     mock_producer.stop = AsyncMock()
@@ -98,8 +108,8 @@ def kafka_producer():
 
     mock_producer.send_and_wait = AsyncMock()
     mock_producer.send_and_wait.return_value = res
-
-    kafka_producer = KafkaProducer()
+    message_helper = MessageHelper(prometheus)
+    kafka_producer = KafkaProducer(message_helper)
     kafka_producer.producer = mock_producer
     return kafka_producer
 
@@ -125,10 +135,3 @@ async def mqtt_client(monkeypatch, message_pack):
     mqtt_client = MagicMock(return_value=mock_client)
     monkeypatch.setattr('aiomqtt.Client', mqtt_client)
     return mqtt_client
-
-
-@pytest.fixture
-async def prometheus():
-    service = Prometheus()
-    service.start = AsyncMock()
-    return service

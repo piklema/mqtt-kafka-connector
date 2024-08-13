@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import sys
+import time
 from collections import defaultdict
 
 import aiomqtt
@@ -10,7 +11,7 @@ import fastavro
 from aiokafka.errors import KafkaConnectionError
 from aiomqtt.message import Message
 
-from mqtt_kafka_connector.clients.kafka import KafkaProducer
+from mqtt_kafka_connector.clients.kafka import KafkaProducer, MessageHelper
 from mqtt_kafka_connector.clients.mqtt import MQTTClient
 from mqtt_kafka_connector.clients.schema_client import SchemaClient
 from mqtt_kafka_connector.conf import (
@@ -179,7 +180,14 @@ class Connector:
 
                 async for mqtt_message in self.mqtt_client.get_messages():
                     try:
+                        start_time = time.time()
+
                         await self.handle(mqtt_message)
+
+                        end_time = time.time()
+                        self.prometheus.save_to_kafka_time_add(
+                            value=end_time - start_time
+                        )
                     except RuntimeError as err:
                         logger.error('Runtime error: %s', err)
 
@@ -208,7 +216,8 @@ class Connector:
             mqtt_message.topic.value
         )
         device_id = mqtt_params.get('device_id')
-        setup_context_vars(device_id)
+
+        setup_context_vars(device_id, mqtt_params.get('customer_id'))
 
         kafka_topic, kafka_key, kafka_headers = self.get_kafka_message_params(
             mqtt_params
@@ -219,22 +228,22 @@ class Connector:
         )
         if self.check_telemetry_messages_pack(mqtt_topic, telemetry_msg_pack):
             await self.kafka_handler(
-                telemetry_msg_pack, kafka_topic, kafka_key, kafka_headers
+                telemetry_msg_pack,
+                kafka_topic,
+                kafka_key,
+                kafka_headers,
             )
-            self.prometheus.add(
-                device_id,
-                mqtt_params.get('customer_id'),
-                len(telemetry_msg_pack),
-            )
+            self.prometheus.messages_counter_add(value=len(telemetry_msg_pack))
 
         return True
 
 
 def main():
-    producer = KafkaProducer()
+    prometheus = Prometheus()
+    message_helper = MessageHelper(prometheus)
+    producer = KafkaProducer(message_helper)
     mqtt_client = MQTTClient()
     schema_client = SchemaClient()
-    prometheus = Prometheus()
     connector = Connector(mqtt_client, producer, schema_client, prometheus)
     asyncio.run(connector.run())
 
