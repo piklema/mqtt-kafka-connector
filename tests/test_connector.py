@@ -4,12 +4,14 @@ from unittest import mock
 
 from aiomqtt.message import Message
 from mqtt_kafka_connector.connector.main import Connector
+from mqtt_kafka_connector.context_vars import customer_id_var, device_id_var
 from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo('UTC')
 DEVICE_ID = '22222'
 SCHEMA_ID = '333333'
-MQTT_TOPIC = f'customer/11111/dev/{DEVICE_ID}/v{SCHEMA_ID}'
+CUSTOMER_ID = '11111'
+MQTT_TOPIC = f'customer/{CUSTOMER_ID}/dev/{DEVICE_ID}/v{SCHEMA_ID}'
 
 
 @mock.patch('httpx.AsyncClient.request')
@@ -35,6 +37,8 @@ async def test_connector(
     )
     res = await connector.handle(message)
     assert res is True
+    assert customer_id_var.get() == CUSTOMER_ID
+    assert device_id_var.get() == DEVICE_ID
 
     send_batch_kwargs = (
         connector.kafka_producer.producer.create_batch.return_value.mock_calls[

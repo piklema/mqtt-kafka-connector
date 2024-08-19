@@ -1,8 +1,10 @@
+import functools
 import logging
 
-from aioprometheus import Counter
+from aioprometheus import Counter, Summary
 from aioprometheus.service import Service
 from mqtt_kafka_connector.conf import PROMETHEUS_PORT
+from mqtt_kafka_connector.context_vars import customer_id_var, device_id_var
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +13,16 @@ class Prometheus:
     def __init__(self):
         self.service = None
         self.messages_counter = Counter(
-            'mqtt_to_kafka_messages_count', 'Number of messages.'
+            'messages_from_devices_count',
+            'Count of messages.',
+        )
+        self.save_to_kafka_time = Summary(
+            'save_to_kafka_time_seconds',
+            'Time spent save messages into kafka.',
+        )
+        self.telemetry_message_lag = Summary(
+            'telemetry_message_lag_seconds',
+            'Time lag between message time and current time.',
         )
 
     async def start(self):
@@ -19,11 +30,21 @@ class Prometheus:
         await self.service.start(addr='0.0.0.0', port=PROMETHEUS_PORT)
         logger.info('Prometheus Service is running')
 
-    def add(self, device_id: int, customer_id: int, messages_count: int):
-        self.messages_counter.add(
+    def _add(self, metric, value: float):
+        getattr(self, metric).add(
             {
-                'device_id': str(device_id),
-                'customer_id': str(customer_id),
+                'device_id': str(device_id_var.get()),
+                'customer_id': str(customer_id_var.get()),
             },
-            messages_count,
+            value=value,
         )
+
+    save_to_kafka_time_add = functools.partialmethod(
+        _add, metric='save_to_kafka_time'
+    )
+    messages_counter_add = functools.partialmethod(
+        _add, metric='messages_counter'
+    )
+    telemetry_message_lag_add = functools.partialmethod(
+        _add, metric='telemetry_message_lag'
+    )

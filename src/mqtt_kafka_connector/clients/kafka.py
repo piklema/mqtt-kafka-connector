@@ -17,33 +17,35 @@ from mqtt_kafka_connector.utils import DateTimeEncoder, clean_none_fields
 logger = logging.getLogger(__name__)
 
 
-class KafkaProducer:
-    def __init__(self):
-        self.producer: AIOKafkaProducer = None
+class MessageHelper:
+    def __init__(self, prometheus_service):
+        self.prometheus_service = prometheus_service
 
-    async def start(self):
-        self.producer: AIOKafkaProducer = AIOKafkaProducer(
-            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-        )
-        await self.producer.start()
-        logger.info('Kafka Producer is running')
+    def _check_message_interval(self, msg: dict) -> bool:
+        msg_time = msg.get('time')
 
-    async def stop(self):
-        await self.producer.stop()
+        if not msg_time:
+            logger.warning('Message has no time field')
+            return False
 
-    @staticmethod
-    def _check_message_interval(msg: dict) -> bool:
-        msg_time = msg['time'].astimezone(dt.timezone.utc)
+        if isinstance(msg_time, str):
+            msg_time = dt.datetime.fromisoformat(msg_time)
+
+        msg_time = msg_time.astimezone(dt.timezone.utc)
         now_utc = dt.datetime.now(dt.timezone.utc)
         early = now_utc - dt.timedelta(hours=MIN_TELEMETRY_INTERVAL_AGE_HOURS)
         late = now_utc + dt.timedelta(hours=MAX_TELEMETRY_INTERVAL_AGE_HOURS)
+
+        self.prometheus_service.telemetry_message_lag_add(
+            value=(now_utc - msg_time).total_seconds(),
+        )
 
         if not early <= msg_time <= late:
             logger.warning('Message time is out of interval')
             return False
         return True
 
-    def _prepare_msg_for_kafka(self, raw_msg: dict) -> bytes | None:
+    def prepare_msg_for_kafka(self, raw_msg: dict) -> bytes | None:
         try:
             if MODIFY_MESSAGE_RM_NONE_FIELDS:
                 raw_msg = clean_none_fields(raw_msg)
@@ -64,6 +66,22 @@ class KafkaProducer:
             return None
         return msg_for_kafka
 
+
+class KafkaProducer:
+    def __init__(self, message_helper: MessageHelper):
+        self.producer: AIOKafkaProducer = None
+        self.message_helper = message_helper
+
+    async def start(self):
+        self.producer: AIOKafkaProducer = AIOKafkaProducer(
+            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        )
+        await self.producer.start()
+        logger.info('Kafka Producer is running')
+
+    async def stop(self):
+        await self.producer.stop()
+
     async def get_partition(self, topic: str, key: bytes) -> int:
         partitions = await self.producer.partitions_for(topic)
         return int(key) % len(partitions)
@@ -79,7 +97,7 @@ class KafkaProducer:
 
         i = 0
         while i < len(messages):
-            msg = self._prepare_msg_for_kafka(messages[i])
+            msg = self.message_helper.prepare_msg_for_kafka(messages[i])
 
             if not msg:
                 i += 1
@@ -119,7 +137,7 @@ class KafkaProducer:
         key: bytes,
         headers: list,
     ) -> bool:
-        value = self._prepare_msg_for_kafka(message)
+        value = self.message_helper.prepare_msg_for_kafka(message)
         res = await self.producer.send_and_wait(
             topic, value=value, key=key, headers=headers
         )

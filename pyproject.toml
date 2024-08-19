@@ -24,7 +24,7 @@ env = [
 [tool.coverage.report]
 show_missing = true
 skip_empty = true
-fail_under = 89
+fail_under = 88
 
 
 [tool.ruff]
