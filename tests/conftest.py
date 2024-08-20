@@ -10,19 +10,6 @@ from dataclasses_avroschema import AvroModel
 from mqtt_kafka_connector.clients.kafka import KafkaProducer, MessageHelper
 from mqtt_kafka_connector.services.prometheus import Prometheus
 
-FAKE_TIME = datetime.datetime(2012, 12, 12, 12, 12, 12)
-
-
-@pytest.fixture
-def patch_datetime_now(monkeypatch):
-
-    class fake_dt(datetime.datetime):
-        @classmethod
-        def now(cls, *args, **kwargs):
-            return FAKE_TIME
-
-    monkeypatch.setattr(datetime, 'datetime', fake_dt)
-
 
 @pytest.fixture()
 def now_timestamp():

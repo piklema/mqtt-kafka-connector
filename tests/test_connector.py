@@ -56,8 +56,7 @@ async def test_connector(
     assert sending_message == message
 
     headers = dict(send_batch_kwargs['headers'])
-    assert headers.pop('message_uuid') is not None
-    assert headers.pop('dt_send_to_kafka') is not None
+    assert headers.pop('message_uuid')
     assert headers == dict(
         schema_id=SCHEMA_ID.encode(),
         message_deserialized=b'1',

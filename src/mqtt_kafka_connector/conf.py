@@ -7,11 +7,7 @@ import sentry_sdk
 from dotenv import load_dotenv
 from sentry_sdk.integrations.logging import LoggingIntegration
 
-from mqtt_kafka_connector.context_vars import (
-    customer_id_var,
-    device_id_var,
-    message_uuid_var,
-)
+from mqtt_kafka_connector.context_vars import device_id_var, message_uuid_var
 
 load_dotenv()
 LOGLEVEL = os.getenv('LOGLEVEL', 'INFO')
@@ -83,7 +79,6 @@ class MessageParamsFilter(Filter):
     def filter(self, record):
         message_uuid = message_uuid_var.get()
         record.device_id = device_id_var.get()
-        record.customer_id = customer_id_var.get()
         record.message_uuid = message_uuid
         record.service_name = SERVICE_NAME
         record.environment = ENVIRONMENT

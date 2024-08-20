@@ -6,15 +6,13 @@ from mqtt_kafka_connector.conf import (
     MIN_TELEMETRY_INTERVAL_AGE_HOURS,
 )
 
-from .conftest import FAKE_TIME
-
 
 async def test_send_batch(kafka_producer, unpack_message_pack):
     await kafka_producer.send_batch(
         'topic',
         unpack_message_pack,
         '1',
-        [('header_1', 'value')],
+        'headers',
     )
 
     kafka_producer.producer.create_batch.assert_called()
@@ -22,7 +20,7 @@ async def test_send_batch(kafka_producer, unpack_message_pack):
     kafka_producer.producer.send_batch.assert_called()
 
 
-async def test_send(kafka_producer, unpack_message_pack, patch_datetime_now):
+async def test_send(kafka_producer, unpack_message_pack):
     result = await kafka_producer.send(
         'topic', unpack_message_pack[0], b'key', [('header', b'value')]
     )
@@ -33,10 +31,7 @@ async def test_send(kafka_producer, unpack_message_pack, patch_datetime_now):
             unpack_message_pack[0]
         ),
         key=b'key',
-        headers=[
-            ('header', b'value'),
-            ('dt_send_to_kafka', FAKE_TIME.isoformat().encode())
-        ]
+        headers=[('header', b'value')],
     )
     assert result is True
 
