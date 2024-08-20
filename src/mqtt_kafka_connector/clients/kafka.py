@@ -45,13 +45,23 @@ class MessageHelper:
             return False
         return True
 
+    @staticmethod
+    def prepare_msg_headers(headers: list) -> list:
+        headers.append(
+            (
+                'dt_send_to_kafka',
+                dt.datetime.now(dt.timezone.utc).isoformat().encode()
+            )
+        )
+        return headers
+
     def prepare_msg_for_kafka(self, raw_msg: dict) -> bytes | None:
         try:
             if MODIFY_MESSAGE_RM_NONE_FIELDS:
                 raw_msg = clean_none_fields(raw_msg)
 
             # Implicit casting to JSON standard without
-            # NaN, Inf, -Inf values with orjson)
+            # NaN, Inf, -Inf values with orjson
             msg_for_kafka = (
                 orjson.dumps(raw_msg)
                 if MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS
@@ -102,7 +112,7 @@ class KafkaProducer:
             if not msg:
                 i += 1
                 continue
-
+            headers = self.message_helper.prepare_msg_headers(headers)
             metadata = batch.append(
                 key=key, value=msg, timestamp=None, headers=headers
             )
@@ -138,6 +148,7 @@ class KafkaProducer:
         headers: list,
     ) -> bool:
         value = self.message_helper.prepare_msg_for_kafka(message)
+        headers = self.message_helper.prepare_msg_headers(headers)
         res = await self.producer.send_and_wait(
             topic, value=value, key=key, headers=headers
         )
