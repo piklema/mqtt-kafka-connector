@@ -27,13 +27,14 @@ class Prometheus:
         logger.info('Prometheus Service is running')
 
     def _add(self, metric, value: float):
-        getattr(self, metric).add(
-            {
-                'device_id': str(device_id_var.get()),
-                'customer_id': str(customer_id_var.get()),
-            },
-            value=value,
-        )
+        if self.service:
+            getattr(self, metric).add(
+                {
+                    'device_id': str(device_id_var.get()),
+                    'customer_id': str(customer_id_var.get()),
+                },
+                value=value,
+            )
 
     messages_counter_add = functools.partialmethod(
         _add, metric='messages_counter'

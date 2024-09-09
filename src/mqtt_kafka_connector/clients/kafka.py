@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 class MessageHelper:
-    def __init__(self, prometheus_service):
-        self.prometheus_service = prometheus_service
+    def __init__(self, prometheus=None):
+        self.prometheus = prometheus
 
     def _check_message_interval(self, msg: dict) -> bool:
         msg_time = msg.get('time')
@@ -35,8 +35,7 @@ class MessageHelper:
         now_utc = dt.datetime.now(dt.timezone.utc)
         early = now_utc - dt.timedelta(hours=MIN_TELEMETRY_INTERVAL_AGE_HOURS)
         late = now_utc + dt.timedelta(hours=MAX_TELEMETRY_INTERVAL_AGE_HOURS)
-
-        self.prometheus_service.telemetry_message_lag_add(
+        self.prometheus.telemetry_message_lag_add(
             value=(now_utc - msg_time).total_seconds(),
         )
 
