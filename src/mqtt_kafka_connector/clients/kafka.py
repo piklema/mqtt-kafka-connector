@@ -40,7 +40,7 @@ class MessageHelper:
         )
 
         if not early <= msg_time <= late:
-            logger.warning('Message time is out of interval')
+            logger.info('Message time is out of interval')
             return False
         return True
 
