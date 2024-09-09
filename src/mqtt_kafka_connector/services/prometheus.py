@@ -16,10 +16,6 @@ class Prometheus:
             'messages_from_devices_count',
             'Count of messages.',
         )
-        self.save_to_kafka_time = Summary(
-            'save_to_kafka_time_seconds',
-            'Time spent save messages into kafka.',
-        )
         self.telemetry_message_lag = Summary(
             'telemetry_message_lag_seconds',
             'Time lag between message time and current time.',
@@ -39,9 +35,6 @@ class Prometheus:
             value=value,
         )
 
-    save_to_kafka_time_add = functools.partialmethod(
-        _add, metric='save_to_kafka_time'
-    )
     messages_counter_add = functools.partialmethod(
         _add, metric='messages_counter'
     )

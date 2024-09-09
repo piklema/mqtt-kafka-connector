@@ -3,7 +3,6 @@ import io
 import json
 import logging
 import sys
-import time
 from collections import defaultdict
 
 import aiomqtt
@@ -180,14 +179,7 @@ class Connector:
 
                 async for mqtt_message in self.mqtt_client.get_messages():
                     try:
-                        start_time = time.time()
-
                         await self.handle(mqtt_message)
-
-                        end_time = time.time()
-                        self.prometheus.save_to_kafka_time_add(
-                            value=end_time - start_time
-                        )
                     except RuntimeError as err:
                         logger.error('Runtime error: %s', err)
 
