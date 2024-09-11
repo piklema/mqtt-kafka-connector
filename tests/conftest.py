@@ -5,23 +5,31 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from aiomqtt.message import Message
+from aioprometheus import REGISTRY
 from dataclasses_avroschema import AvroModel
-from mqtt_kafka_connector.clients.kafka import KafkaProducer
+from mqtt_kafka_connector.clients.kafka import KafkaProducer, MessageHelper
 from mqtt_kafka_connector.services.prometheus import Prometheus
 
 
 @pytest.fixture()
-def payload():
+def now_timestamp():
+    return int(
+        datetime.datetime.now(datetime.timezone.utc).timestamp() * 1_000
+    )
+
+
+@pytest.fixture()
+def payload(now_timestamp):
     return dict(
         messages=[
             dict(
-                time=1_701_955_305_760,
+                time=now_timestamp,
                 speed=10.00,
                 lat=11.2222,
                 lon=22.3333,
             ),
             dict(
-                time=1_600_000_000_111,
+                time=now_timestamp,
                 speed=33.00,
                 lat=55.5555,
                 lon=77.9999,
@@ -61,12 +69,26 @@ def message_pack(payload):
 
 
 @pytest.fixture()
+def unpack_message_pack(payload, now_timestamp):
+    return [{'time': datetime.datetime.now()}] * 2
+
+
+@pytest.fixture()
 def schema():
     return MessagePack.generate_schema()
 
 
+@pytest.fixture
+async def prometheus():
+    service = Prometheus()
+    service.start = AsyncMock()
+    service._add = MagicMock()
+    yield service
+    REGISTRY.clear()
+
+
 @pytest.fixture()
-def kafka_producer():
+def kafka_producer(prometheus):
     mock_producer = AsyncMock()
     mock_producer.start = AsyncMock()
     mock_producer.stop = AsyncMock()
@@ -86,8 +108,8 @@ def kafka_producer():
 
     mock_producer.send_and_wait = AsyncMock()
     mock_producer.send_and_wait.return_value = res
-
-    kafka_producer = KafkaProducer()
+    message_helper = MessageHelper(prometheus)
+    kafka_producer = KafkaProducer(message_helper)
     kafka_producer.producer = mock_producer
     return kafka_producer
 
@@ -113,10 +135,3 @@ async def mqtt_client(monkeypatch, message_pack):
     mqtt_client = MagicMock(return_value=mock_client)
     monkeypatch.setattr('aiomqtt.Client', mqtt_client)
     return mqtt_client
-
-
-@pytest.fixture
-async def prometheus():
-    service = Prometheus()
-    service.start = AsyncMock()
-    return service

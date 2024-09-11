@@ -79,7 +79,7 @@ install: uninstall clean ## install the package to the active Python's site-pack
 	python setup.py install
 
 run: ## run local
-	@python  src/mqtt_kafka_connector/connector/main.py
+	@python src/mqtt_kafka_connector/connector/main.py
 
 requirements_uninstall: ##
 	@pip freeze | grep -v "pkg-resources" | grep -v "@" | xargs -r pip uninstall -y --quiet
