@@ -124,9 +124,10 @@ class KafkaProducer:
         fut = await self.producer.send_batch(batch, topic, partition=partition)
         res = await fut
         logger.info(
-            'Sent batch %s messages to partition %s',
+            'Sent batch %s messages to partition %s with result %s',
             batch.record_count(),
-            res.partition,
+            partition,
+            res
         )
 
     async def send(
