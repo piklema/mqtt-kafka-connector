@@ -93,29 +93,34 @@ class Connector:
         mqtt_message: aiomqtt.Message,
         schema_id: int,
     ) -> list[dict] | None:
-        mqtt_topic = mqtt_message.topic
+        try:
+            mqtt_topic = mqtt_message.topic
 
-        logger.debug(
-            'Message received from '
-            'mqtt_topic.value=%s message.payload=%s message.qos=%s',
-            mqtt_topic.value,
-            mqtt_message.payload,
-            mqtt_message.qos,
-        )
+            logger.debug(
+                'Message received from '
+                'mqtt_topic.value=%s message.payload=%s message.qos=%s',
+                mqtt_topic.value,
+                mqtt_message.payload,
+                mqtt_message.qos,
+            )
 
-        if WITH_MESSAGE_DESERIALIZE:
-            mqtt_msg_dict = await self.deserialize(mqtt_message, schema_id)
-            telemetry_msg_pack = mqtt_msg_dict['messages']
+            if WITH_MESSAGE_DESERIALIZE:
+                mqtt_msg_dict = await self.deserialize(mqtt_message, schema_id)
+                telemetry_msg_pack = mqtt_msg_dict['messages']
 
-        else:
-            data = mqtt_message.payload
-            telemetry_msg_pack = json.loads(data.decode())['messages']
+            else:
+                data = mqtt_message.payload
+                telemetry_msg_pack = json.loads(data.decode())['messages']
 
-        if not telemetry_msg_pack:
-            logger.warning('Messages is empty')
-            return
+            if not telemetry_msg_pack:
+                logger.warning('Messages is empty')
+                return
 
-        return telemetry_msg_pack
+            return telemetry_msg_pack
+
+        except Exception as err:
+            logger.exception('Error while handling message: %s', err)
+
 
     @staticmethod
     def get_kafka_message_params(
@@ -221,14 +226,18 @@ class Connector:
         telemetry_msg_pack = await self.get_telemetry_message_pack(
             mqtt_message, schema_id
         )
-        if self.check_telemetry_messages_pack(mqtt_topic, telemetry_msg_pack):
+        if telemetry_msg_pack and self.check_telemetry_messages_pack(
+            mqtt_topic,
+            telemetry_msg_pack
+        ):
             await self.kafka_handler(
                 telemetry_msg_pack,
                 kafka_topic,
                 kafka_key,
                 kafka_headers,
             )
-            self.prometheus.messages_counter_add(value=len(telemetry_msg_pack))
+            if self.prometheus:
+                self.prometheus.messages_counter_add(value=len(telemetry_msg_pack))
 
         return True
 
