@@ -23,7 +23,7 @@ class Prometheus:
 
     async def start(self):
         self.service = Service()
-        await self.service.start(addr='0.0.0.0', port=PROMETHEUS_PORT)
+        await self.service.start(addr='0.0.0.0', port=int(PROMETHEUS_PORT))
         logger.info('Prometheus Service is running')
 
     def _add(self, metric, value: float):
