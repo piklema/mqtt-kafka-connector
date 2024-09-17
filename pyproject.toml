@@ -18,6 +18,7 @@ tests_require = [
 ]
 env = [
     "WITH_MESSAGE_DESERIALIZE=True",
+    "PROMETHEUS_PORT=8011",
 ]
 
 

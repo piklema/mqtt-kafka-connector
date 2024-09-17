@@ -35,9 +35,10 @@ class MessageHelper:
         now_utc = dt.datetime.now(dt.timezone.utc)
         early = now_utc - dt.timedelta(hours=MIN_TELEMETRY_INTERVAL_AGE_HOURS)
         late = now_utc + dt.timedelta(hours=MAX_TELEMETRY_INTERVAL_AGE_HOURS)
-        self.prometheus.telemetry_message_lag_add(
-            value=(now_utc - msg_time).total_seconds(),
-        )
+        if self.prometheus:
+            self.prometheus.telemetry_message_lag_add(
+                value=(now_utc - msg_time).total_seconds(),
+            )
 
         if not early <= msg_time <= late:
             logger.info('Message time is out of interval')
@@ -112,22 +113,25 @@ class KafkaProducer:
                 )
                 res = await fut
                 logger.info(
-                    'Sent batch %s messages sent to partition %s',
+                    'Sent batch %s messages to with result %r',
                     batch.record_count(),
-                    res.partition,
+                    res,
                 )
                 batch = self.producer.create_batch()
                 continue
             i += 1
 
-        partition = await self.get_partition(topic, key)
-        fut = await self.producer.send_batch(batch, topic, partition=partition)
-        res = await fut
-        logger.info(
-            'Sent batch %s messages to partition %s',
-            batch.record_count(),
-            res.partition,
-        )
+        if batch.record_count():
+            partition = await self.get_partition(topic, key)
+            fut = await self.producer.send_batch(
+                batch, topic, partition=partition,
+            )
+            res = await fut
+            logger.info(
+                'Sent batch %s messages to with result %r',
+                batch.record_count(),
+                res
+            )
 
     async def send(
         self,

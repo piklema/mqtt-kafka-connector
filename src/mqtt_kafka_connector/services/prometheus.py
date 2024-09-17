@@ -23,18 +23,17 @@ class Prometheus:
 
     async def start(self):
         self.service = Service()
-        await self.service.start(addr='0.0.0.0', port=PROMETHEUS_PORT)
+        await self.service.start(addr='0.0.0.0', port=int(PROMETHEUS_PORT))
         logger.info('Prometheus Service is running')
 
     def _add(self, metric, value: float):
-        if self.service:
-            getattr(self, metric).add(
-                {
-                    'device_id': str(device_id_var.get()),
-                    'customer_id': str(customer_id_var.get()),
-                },
-                value=value,
-            )
+        getattr(self, metric).add(
+            {
+                'device_id': str(device_id_var.get()),
+                'customer_id': str(customer_id_var.get()),
+            },
+            value=value,
+        )
 
     messages_counter_add = functools.partialmethod(
         _add, metric='messages_counter'
