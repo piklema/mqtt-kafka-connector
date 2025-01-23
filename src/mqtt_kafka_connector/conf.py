@@ -1,6 +1,5 @@
 import logging.config
 import os
-from distutils.util import strtobool
 from logging import Filter
 
 import sentry_sdk
@@ -8,6 +7,12 @@ from dotenv import load_dotenv
 from sentry_sdk.integrations.logging import LoggingIntegration
 
 from mqtt_kafka_connector.context_vars import device_id_var, message_uuid_var
+
+def strtobool(value: str) -> bool:
+  value = value.lower()
+  if value in ("y", "yes", "on", "1", "true", "t"):
+    return True
+  return False
 
 load_dotenv()
 LOGLEVEL = os.getenv('LOGLEVEL', 'INFO')

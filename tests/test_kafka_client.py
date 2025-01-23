@@ -56,9 +56,9 @@ async def test_send(kafka_producer, unpack_message_pack):
         ),
     ],
 )
-async def test_check_message_interval(kafka_producer, time, expected):
+async def test_is_valid_message_time(kafka_producer, time, expected):
     message = {'time': time}
     assert (
-        kafka_producer.message_helper._check_message_interval(message)
+        kafka_producer.message_helper.is_valid_message_time(message)
         is expected
     )

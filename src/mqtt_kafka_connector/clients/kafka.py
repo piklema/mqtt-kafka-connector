@@ -21,7 +21,7 @@ class MessageHelper:
     def __init__(self, prometheus=None):
         self.prometheus = prometheus
 
-    def _check_message_interval(self, msg: dict) -> bool:
+    def is_valid_message_time(self, msg: dict) -> bool:
         msg_time = msg.get('time')
 
         if not msg_time:
@@ -57,7 +57,7 @@ class MessageHelper:
                 else json.dumps(raw_msg, cls=DateTimeEncoder).encode()
             )
 
-            if not self._check_message_interval(msg=raw_msg):
+            if not self.is_valid_message_time(msg=raw_msg):
                 return None
 
         except Exception as e:
