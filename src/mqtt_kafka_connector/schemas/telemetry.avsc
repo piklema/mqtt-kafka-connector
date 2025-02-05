@@ -1,0 +1,791 @@
+{
+    "namespace": "com.piklema.schemas",
+    "name": "Telemetry",
+    "type": "record",
+    "doc": "Device telemetry message",
+    "fields": [
+        {
+            "name": "time",
+            "type": {
+                "logicalType": "timestamp-millis",
+                "type": "long"
+            }
+        },
+        {
+            "default": null,
+            "name": "lat_CAN",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "lon_CAN",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "height_CAN",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "speed_CAN",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "satelite_count_CAN",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "accelerator_position",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "height",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "lat",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "lon",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "speed",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "course",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "hdop",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "gps_quality",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "inclinometer",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "liquid_temperature",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "fuel_level",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "sensor_speed",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "engine_speed",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "out_temperature",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "weight_disp",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "satelite_count",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "total_engine_hours",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "incline_lengthwise",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "incline_lateral",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "current_weight_rl",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "current_weight_rr",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "current_weight_fl",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "current_weight_fr",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "fuel_tank_level",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "barometric_pressure",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "voltage",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "weight_static",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "weight_dynamic",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "fuel_cons",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "mqtt_connected",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "gsm_signal_level",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "gps_data_validness",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "batt_status",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "batt_capacity",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "satelite_count_can_0",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "lat_filtered",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "lon_filtered",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "total_distance_can",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "shift_distance",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "total_distance_from_server",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "engine_percent_load_at_current_speed",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "fuel_injector_metering_rail_pressure",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "fuel_injector_timing_rail_pressure",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "fuel_temp_2",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "coolant_press",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "press_intake_manifold1",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "Intake_temperature",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "gps_mileage",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "total_motohours",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "bbt",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "TPMS_Tire_press_threshold_detect",
+            "type": [
+                "null",
+                "int"
+            ]
+        },
+        {
+            "default": null,
+            "name": "TPMS_Tire_state",
+            "type": [
+                "null",
+                "int"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_status",
+            "type": [
+                "null",
+                "int"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_sensor_electrical_fault",
+            "type": [
+                "null",
+                "int"
+            ]
+        },
+        {
+            "default": null,
+            "name": "transmission_f_pos",
+            "type": [
+                "null",
+                "int"
+            ]
+        },
+        {
+            "default": null,
+            "name": "transmission_n_pos",
+            "type": [
+                "null",
+                "int"
+            ]
+        },
+        {
+            "default": null,
+            "name": "transmission_r_pos",
+            "type": [
+                "null",
+                "int"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_sensor_status",
+            "type": [
+                "null",
+                "int"
+            ]
+        },
+        {
+            "default": null,
+            "name": "parking_brake_switch",
+            "type": [
+                "null",
+                "int"
+            ]
+        },
+        {
+            "default": null,
+            "name": "transmission_splitter_position",
+            "type": [
+                "null",
+                "int"
+            ]
+        },
+        {
+            "default": null,
+            "name": "air_temp",
+            "type": [
+                "null",
+                "int"
+            ]
+        },
+        {
+            "default": null,
+            "name": "hydraulic_oil_temperture",
+            "type": [
+                "null",
+                "int"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_location_fl",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_pressure_fl",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_temperature_fl",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "PP_timeout_fl",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "PP_alarm_fl",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_location_fr",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_pressure_fr",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_temperature_fr",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "PP_alarm_fr",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "PP_timeout_fr",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_location_rlo",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_temperature_rlo",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_pressure_rlo",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "PP_alarm_rlo",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "PP_timeout_rlo",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_location_rli",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_temperature_rli",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_pressure_rli",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "PP_alarm_rli",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "PP_timeout_rli",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_location_rri",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_pressure_rri",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_temperature_rri",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "PP_alarm_rri",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "PP_timeout_rri",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_location_rro",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_pressure_rro",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "tire_temperature_rro",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "PP_alarm_rro",
+            "type": [
+                "null",
+                "double"
+            ]
+        },
+        {
+            "default": null,
+            "name": "PP_timeout_rro",
+            "type": [
+                "null",
+                "double"
+            ]
+        }
+    ]
+}

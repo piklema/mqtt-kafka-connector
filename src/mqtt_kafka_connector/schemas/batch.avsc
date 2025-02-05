@@ -1,0 +1,17 @@
+{
+    "name": "MessagesPacket",
+    "type": "record"
+    "fields": [
+        {
+            "name": "messages",
+            "type": {
+                "name": "message",
+                "type": "array"
+                "items": {
+                    "type": "com.piklema.schemas.Telemetry"
+                },
+
+            }
+        }
+    ],
+}
