@@ -1,52 +1,41 @@
-[tool.pytest.ini_options]
-testpaths = ['tests']
-addopts = [
-    '-p', 'no:warnings'
-]
-plugins = [
-    'pytest_asyncio',
-    'pytest_mock',
-]
-asyncio_mode = 'auto'
-pythonpath = ['src']
-filterwarnings = [
-    'ignore::DeprecationWarning',
-    'ignore::*PytestCollectionWarning*'
-]
-tests_require = [
-    'develop'
+[project]
+authors = [{name = "Piklema Team"}]
+dependencies = [ "aiocache>=0.12.3,<0.13", "aiohttp>=3.11.14,<4", "aiokafka>=0.12.0,<0.13", "aiomqtt>=2.3.0,<3", "aioprometheus>=23.12.0,<24", "dataclasses-avroschema>=0.65.10,<0.66", "httpx>=0.28.1,<0.29", "python-dotenv>=1.1.0,<2", "sentry-sdk>=2.24.1,<3",]
+name = "mqtt-kafka-connector"
+requires-python = "~= 3.13"
+version = "0.1.0"
+
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[project.optional-dependencies]
+dev = [
+    "deepdiff",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-env",
+    "pytest",
+    "ruff"
 ]
 env = [
     "WITH_MESSAGE_DESERIALIZE=True",
 ]
 
-
-[tool.coverage.report]
-show_missing = true
-skip_empty = true
-fail_under = 88
-
-
 [tool.ruff]
-line-length = 79
-exclude = [
-    '.git',
-    '.gitignore',
-    '*.pot',
-    '*.py[co]',
-    '__pycache__',
-    'venv',
-    '.env',
-    '.venv',
-    'versions',
-    'static',
-    'media',
-    'node_modules',
-    'src/emulate'
-]
+line-length = 88
+src = ["src/mqtt_kafka_connector"]
 
 [tool.ruff.lint]
-extend-select = ['I', 'E', 'W', 'F']
+extend-select = ["I"]
 
-[tool.ruff.format]
-quote-style = 'single'
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["osx-arm64"]
+
+[tool.pixi.pypi-dependencies]
+mqtt_kafka_connector = { path = ".", editable = true }
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
