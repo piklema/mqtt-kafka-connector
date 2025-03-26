@@ -57,16 +57,16 @@ class Connector:
         schema = await self.schema_client.get_schema(schema_id)
 
         if not schema:
-            raise RuntimeError('Schema not found')
+            raise RuntimeError("Schema not found")
 
         fp = io.BytesIO(msg.payload)
         try:
             parsed_schema = fastavro.parse_schema(schema)
             data = fastavro.schemaless_reader(fp, parsed_schema)
         except (IndexError, StopIteration, EOFError):
-            raise RuntimeError('Message is not valid')
+            raise RuntimeError("Message is not valid")
 
-        logger.debug('Message deserialized: data=%s', data)
+        logger.debug("Message deserialized: data=%s", data)
 
         return data
 
@@ -80,12 +80,12 @@ class Connector:
             self.last_messages[mqtt_topic] = last_message
         else:
             logger.info(
-                'Message pack from %s already sending. Skip sending to kafka',
+                "Message pack from %s already sending. Skip sending to kafka",
                 mqtt_topic,
             )
             return False
 
-        logger.info('Receive %s messages from %s', messages_count, mqtt_topic)
+        logger.info("Receive %s messages from %s", messages_count, mqtt_topic)
         return True
 
     async def get_telemetry_message_pack(
@@ -96,8 +96,8 @@ class Connector:
         mqtt_topic = mqtt_message.topic
 
         logger.debug(
-            'Message received from '
-            'mqtt_topic.value=%s message.payload=%s message.qos=%s',
+            "Message received from "
+            "mqtt_topic.value=%s message.payload=%s message.qos=%s",
             mqtt_topic.value,
             mqtt_message.payload,
             mqtt_message.qos,
@@ -105,14 +105,14 @@ class Connector:
 
         if WITH_MESSAGE_DESERIALIZE:
             mqtt_msg_dict = await self.deserialize(mqtt_message, schema_id)
-            telemetry_msg_pack = mqtt_msg_dict['messages']
+            telemetry_msg_pack = mqtt_msg_dict["messages"]
 
         else:
             data = mqtt_message.payload
-            telemetry_msg_pack = json.loads(data.decode())['messages']
+            telemetry_msg_pack = json.loads(data.decode())["messages"]
 
         if not telemetry_msg_pack:
-            logger.warning('Messages is empty')
+            logger.warning("Messages is empty")
             return
 
         return telemetry_msg_pack
@@ -127,16 +127,14 @@ class Connector:
         kafka_headers = [
             (k, v.encode())
             for k, v in mqtt_topic_params.items()
-            if k in KAFKA_HEADERS_LIST.split(',')
+            if k in KAFKA_HEADERS_LIST.split(",")
         ]
 
         if WITH_MESSAGE_DESERIALIZE:
-            kafka_headers.append(('message_deserialized', b'1'))
+            kafka_headers.append(("message_deserialized", b"1"))
 
         if TRACE_HEADER:
-            kafka_headers.append(
-                (TRACE_HEADER, message_uuid_var.get().encode())
-            )
+            kafka_headers.append((TRACE_HEADER, message_uuid_var.get().encode()))
 
         return kafka_topic, kafka_key, kafka_headers
 
@@ -147,9 +145,7 @@ class Connector:
         kafka_key: bytes,
         kafka_headers: KafkaHeadersType,
     ):
-        logger.info(
-            'Start send to kafka topic=%s, key=%s', kafka_topic, int(kafka_key)
-        )
+        logger.info("Start send to kafka topic=%s, key=%s", kafka_topic, int(kafka_key))
 
         if KAFKA_SEND_BATCHES:
             await self.kafka_producer.send_batch(
@@ -171,7 +167,7 @@ class Connector:
         return True
 
     async def run(self):
-        logger.info('Connector starting...')
+        logger.info("Connector starting...")
         while True:
             try:
                 if self.prometheus:
@@ -183,19 +179,18 @@ class Connector:
                     try:
                         await self.handle(mqtt_message)
                     except RuntimeError as err:
-                        logger.error('Runtime error: %s', err)
+                        logger.error("Runtime error: %s", err)
 
             except aiomqtt.MqttError as err:
                 logger.warning(
-                    'MQTT connection error %s. ' 'Reconnecting in %s seconds.',
+                    "MQTT connection error %s. Reconnecting in %s seconds.",
                     err,
                     RECONNECT_INTERVAL_SEC,
                 )
                 await asyncio.sleep(RECONNECT_INTERVAL_SEC)
             except KafkaConnectionError as err:
                 logger.warning(
-                    'Kafka connection error %s. '
-                    'Reconnecting in %s seconds.',
+                    "Kafka connection error %s. Reconnecting in %s seconds.",
                     err,
                     RECONNECT_INTERVAL_SEC,
                 )
@@ -207,17 +202,15 @@ class Connector:
 
     async def handle(self, mqtt_message: Message):
         mqtt_topic = mqtt_message.topic.value
-        mqtt_params = self.mqtt_topic_params_tmpl.to_dict(
-            mqtt_message.topic.value
-        )
-        device_id = mqtt_params.get('device_id')
+        mqtt_params = self.mqtt_topic_params_tmpl.to_dict(mqtt_message.topic.value)
+        device_id = mqtt_params.get("device_id")
 
-        setup_context_vars(device_id, mqtt_params.get('customer_id'))
+        setup_context_vars(device_id, mqtt_params.get("customer_id"))
 
         kafka_topic, kafka_key, kafka_headers = self.get_kafka_message_params(
             mqtt_params
         )
-        schema_id = int(dict(kafka_headers)['schema_id'])
+        schema_id = int(dict(kafka_headers)["schema_id"])
         telemetry_msg_pack = await self.get_telemetry_message_pack(
             mqtt_message, schema_id
         )
@@ -243,5 +236,5 @@ def main():
     asyncio.run(connector.run())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

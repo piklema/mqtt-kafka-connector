@@ -22,10 +22,10 @@ class MessageHelper:
         self.prometheus = prometheus
 
     def _check_message_interval(self, msg: dict) -> bool:
-        msg_time = msg.get('time')
+        msg_time = msg.get("time")
 
         if not msg_time:
-            logger.warning('Message has no time field')
+            logger.warning("Message has no time field")
             return False
 
         if isinstance(msg_time, str):
@@ -40,7 +40,7 @@ class MessageHelper:
         )
 
         if not early <= msg_time <= late:
-            logger.info('Message time is out of interval')
+            logger.info("Message time is out of interval")
             return False
         return True
 
@@ -61,7 +61,7 @@ class MessageHelper:
                 return None
 
         except Exception as e:
-            logger.exception('Error while preparing message for Kafka: %s', e)
+            logger.exception("Error while preparing message for Kafka: %s", e)
             return None
         return msg_for_kafka
 
@@ -76,7 +76,7 @@ class KafkaProducer:
             bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
         )
         await self.producer.start()
-        logger.info('Kafka Producer is running')
+        logger.info("Kafka Producer is running")
 
     async def stop(self):
         await self.producer.stop()
@@ -102,17 +102,13 @@ class KafkaProducer:
                 i += 1
                 continue
 
-            metadata = batch.append(
-                key=key, value=msg, timestamp=None, headers=headers
-            )
+            metadata = batch.append(key=key, value=msg, timestamp=None, headers=headers)
             if metadata is None:
                 partition = await self.get_partition(topic, key)
-                fut = await self.producer.send_batch(
-                    batch, topic, partition=partition
-                )
+                fut = await self.producer.send_batch(batch, topic, partition=partition)
                 res = await fut
                 logger.info(
-                    'Sent batch %s messages sent to partition %s',
+                    "Sent batch %s messages sent to partition %s",
                     batch.record_count(),
                     res.partition,
                 )
@@ -124,7 +120,7 @@ class KafkaProducer:
         fut = await self.producer.send_batch(batch, topic, partition=partition)
         res = await fut
         logger.info(
-            'Sent batch %s messages to partition %s',
+            "Sent batch %s messages to partition %s",
             batch.record_count(),
             res.partition,
         )
@@ -140,7 +136,5 @@ class KafkaProducer:
         res = await self.producer.send_and_wait(
             topic, value=value, key=key, headers=headers
         )
-        logger.info(
-            '1 message sent with key %s to partition %s', key, res.partition
-        )
+        logger.info("1 message sent with key %s to partition %s", key, res.partition)
         return True

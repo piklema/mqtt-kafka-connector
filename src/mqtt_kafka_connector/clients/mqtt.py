@@ -33,10 +33,8 @@ class MQTTClient:
             timeout=300,
         )
         # setup manual ack
-        self.loop.run_in_executor(
-            None, self.client._client.manual_ack_set, True
-        )
-        logger.info('MQTT Client is running')
+        self.loop.run_in_executor(None, self.client._client.manual_ack_set, True)
+        logger.info("MQTT Client is running")
 
     async def get_messages(self) -> typing.AsyncIterator[aiomqtt.Message]:
         async with self.client as cli:

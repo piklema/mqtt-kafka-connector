@@ -3,11 +3,11 @@ from contextvars import ContextVar
 
 from sentry_sdk import set_tag
 
-MESSAGE_UUID = 'message_uuid'
-DEVICE_ID = 'device_id'
-CUSTOMER_ID = 'customer_id'
+MESSAGE_UUID = "message_uuid"
+DEVICE_ID = "device_id"
+CUSTOMER_ID = "customer_id"
 
-message_uuid_var = ContextVar(MESSAGE_UUID, default='')
+message_uuid_var = ContextVar(MESSAGE_UUID, default="")
 device_id_var = ContextVar(DEVICE_ID, default=0)
 customer_id_var = ContextVar(CUSTOMER_ID, default=0)
 
