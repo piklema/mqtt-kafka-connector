@@ -22,6 +22,9 @@ env = [
     "WITH_MESSAGE_DESERIALIZE=True",
 ]
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [tool.ruff]
 line-length = 88
 src = ["src/mqtt_kafka_connector"]
