@@ -18,9 +18,9 @@ dev = [
     "pytest",
     "ruff"
 ]
-env = [
-    "WITH_MESSAGE_DESERIALIZE=True",
-]
+
+[project.scripts]
+mqtt_kafka_connector = "mqtt_kafka_connector.connector.main:main"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
