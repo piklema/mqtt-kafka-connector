@@ -37,6 +37,9 @@ class MQTTClient:
         logger.info("MQTT Client is running")
 
     async def get_messages(self) -> typing.AsyncIterator[aiomqtt.Message]:
+        if self.client is None:
+            raise RuntimeError("Client is not initialized")
+
         async with self.client as cli:
             await cli.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=1)
             async for mqtt_message in cli.messages:

@@ -1,5 +1,6 @@
 import logging.config
 import os
+import typing
 from logging import Filter
 
 import sentry_sdk
@@ -26,24 +27,30 @@ def strtobool(val: str) -> bool:
         raise ValueError(f"invalid truth value {val}")
 
 
+def error() -> typing.NoReturn:
+    raise ValueError
+
+
 load_dotenv()
 LOGLEVEL = os.getenv("LOGLEVEL", "INFO")
-MQTT_HOST = os.getenv("MQTT_HOST")
+MQTT_HOST = os.getenv("MQTT_HOST") or error()
 MQTT_PORT = int(os.getenv("MQTT_PORT") or 1883)
-MQTT_USER = os.getenv("MQTT_USER")
-MQTT_PASSWORD = os.getenv("MQTT_PASSWORD")
+MQTT_USER = os.getenv("MQTT_USER") or error()
+MQTT_PASSWORD = os.getenv("MQTT_PASSWORD") or error()
 RECONNECT_INTERVAL_SEC = int(os.getenv("RECONNECT_INTERVAL_SEC", 3))
 MQTT_CLIENT_ID = os.getenv("MQTT_CLIENT_ID") or "mqtt-kafka-connector-1"
-MQTT_TOPIC_SOURCE_MATCH = os.getenv("MQTT_TOPIC_SOURCE_MATCH")
-MQTT_TOPIC_SOURCE_TEMPLATE = os.getenv("MQTT_TOPIC_SOURCE_TEMPLATE")
+MQTT_TOPIC_SOURCE_MATCH = os.getenv("MQTT_TOPIC_SOURCE_MATCH") or error()
+MQTT_TOPIC_SOURCE_TEMPLATE = os.getenv("MQTT_TOPIC_SOURCE_TEMPLATE") or error()
 
-KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS")
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS") or error()
 TELEMETRY_KAFKA_TOPIC = os.getenv("TELEMETRY_KAFKA_TOPIC", "telemetry")
-KAFKA_KEY_TEMPLATE = os.getenv("KAFKA_KEY_TEMPLATE")
-KAFKA_HEADERS_LIST = os.getenv("KAFKA_HEADERS_LIST")
-TRACE_HEADER = os.getenv("TRACE_HEADER")
-SCHEMA_REGISTRY_URL = os.getenv("SCHEMA_REGISTRY_URL")
-SCHEMA_REGISTRY_REQUEST_HEADERS = os.getenv("SCHEMA_REGISTRY_REQUEST_HEADERS")
+KAFKA_KEY_TEMPLATE = os.getenv("KAFKA_KEY_TEMPLATE") or error()
+KAFKA_HEADERS_LIST = os.getenv("KAFKA_HEADERS_LIST") or error()
+TRACE_HEADER = os.getenv("TRACE_HEADER") or error()
+SCHEMA_REGISTRY_URL = os.getenv("SCHEMA_REGISTRY_URL") or error()
+SCHEMA_REGISTRY_REQUEST_HEADERS = (
+    os.getenv("SCHEMA_REGISTRY_REQUEST_HEADERS") or error()
+)
 
 WITH_MESSAGE_DESERIALIZE = strtobool(os.getenv("WITH_MESSAGE_DESERIALIZE", "True"))
 if WITH_MESSAGE_DESERIALIZE and not (

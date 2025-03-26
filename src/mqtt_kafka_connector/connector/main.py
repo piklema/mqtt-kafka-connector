@@ -43,7 +43,7 @@ class Connector:
         mqtt_client: MQTTClient,
         kafka_producer: KafkaProducer,
         schema_client: SchemaClient,
-        prometheus: Prometheus = None,
+        prometheus: Prometheus | None = None,
     ):
         self.kafka_producer = kafka_producer
         self.mqtt_client = mqtt_client
