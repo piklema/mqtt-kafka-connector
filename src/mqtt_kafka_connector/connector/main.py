@@ -1,29 +1,19 @@
 import asyncio
 import io
-import json
 import logging
 import sys
 from collections import defaultdict
 
 import aiomqtt
 import fastavro
+import ujson as json
 from aiokafka.errors import KafkaConnectionError
 from aiomqtt.message import Message
 
+from mqtt_kafka_connector import conf
 from mqtt_kafka_connector.clients.kafka import KafkaProducer, MessageHelper
 from mqtt_kafka_connector.clients.mqtt import MQTTClient
 from mqtt_kafka_connector.clients.schema_client import SchemaClient
-from mqtt_kafka_connector.conf import (
-    KAFKA_HEADERS_LIST,
-    KAFKA_KEY_TEMPLATE,
-    KAFKA_SEND_BATCHES,
-    MQTT_TOPIC_SOURCE_TEMPLATE,
-    PROMETHEUS_PORT,
-    RECONNECT_INTERVAL_SEC,
-    TELEMETRY_KAFKA_TOPIC,
-    TRACE_HEADER,
-    WITH_MESSAGE_DESERIALIZE,
-)
 from mqtt_kafka_connector.context_vars import (
     message_uuid_var,
     setup_context_vars,
@@ -50,7 +40,8 @@ class Connector:
         self.schema_client = schema_client
         self.prometheus = prometheus
 
-        self.mqtt_topic_params_tmpl = Template(MQTT_TOPIC_SOURCE_TEMPLATE)
+        self.mqtt_topic_params_tmpl = Template(conf.MQTT_TOPIC_SOURCE_TEMPLATE)
+        self.mqtt_fstate_params_tmpl = Template(conf.MQTT_FSTATE_SOURCE_TEMPLATE)
         self.last_messages = defaultdict(dict)
 
     async def deserialize(self, msg: aiomqtt.Message, schema_id: int) -> dict:
@@ -103,7 +94,7 @@ class Connector:
             mqtt_message.qos,
         )
 
-        if WITH_MESSAGE_DESERIALIZE:
+        if conf.WITH_MESSAGE_DESERIALIZE:
             mqtt_msg_dict = await self.deserialize(mqtt_message, schema_id)
             telemetry_msg_pack = mqtt_msg_dict["messages"]
 
@@ -120,21 +111,22 @@ class Connector:
     @staticmethod
     def get_kafka_message_params(
         mqtt_topic_params: dict,
-    ) -> TopicHeaders | None:
+        topic_name_tpl: str,
+    ) -> TopicHeaders:
         """Get Kafka topic & headers from MQTT topic"""
-        kafka_topic = TELEMETRY_KAFKA_TOPIC.format(**mqtt_topic_params)
-        kafka_key = KAFKA_KEY_TEMPLATE.format(**mqtt_topic_params).encode()
+        kafka_topic = topic_name_tpl.format(**mqtt_topic_params)
+        kafka_key = conf.KAFKA_KEY_TEMPLATE.format(**mqtt_topic_params).encode()
         kafka_headers = [
             (k, v.encode())
             for k, v in mqtt_topic_params.items()
-            if k in KAFKA_HEADERS_LIST.split(",")
+            if k in conf.KAFKA_HEADERS_LIST.split(",")
         ]
 
-        if WITH_MESSAGE_DESERIALIZE:
+        if conf.WITH_MESSAGE_DESERIALIZE:
             kafka_headers.append(("message_deserialized", b"1"))
 
-        if TRACE_HEADER:
-            kafka_headers.append((TRACE_HEADER, message_uuid_var.get().encode()))
+        if conf.TRACE_HEADER:
+            kafka_headers.append((conf.TRACE_HEADER, message_uuid_var.get().encode()))
 
         return kafka_topic, kafka_key, kafka_headers
 
@@ -147,7 +139,7 @@ class Connector:
     ):
         logger.info("Start send to kafka topic=%s, key=%s", kafka_topic, int(kafka_key))
 
-        if KAFKA_SEND_BATCHES:
+        if conf.KAFKA_SEND_BATCHES:
             await self.kafka_producer.send_batch(
                 kafka_topic,
                 messages,
@@ -200,7 +192,40 @@ class Connector:
                 if self.prometheus:
                     await self.prometheus.service.stop()
 
-    async def handle(self, mqtt_message: Message):
+    async def handle(self, mqtt_message: Message) -> bool:
+        if mqtt_message.topic.matches(conf.MQTT_TOPIC_SOURCE_MATCH):
+            return await self.telemetry_handler(mqtt_message)
+        elif mqtt_message.topic.matches(conf.MQTT_FSTATE_SOURCE_MATCH):
+            return await self.fstate_handler(mqtt_message)
+        else:
+            logger.warning("Unknown topic %s", mqtt_message.topic)
+            return False
+
+    async def fstate_handler(self, mqtt_message: Message) -> bool:
+        logger.info("Start send to kafka topic=%s", mqtt_message.topic)
+
+        mqtt_topic_params = self.mqtt_fstate_params_tmpl.to_dict(
+            mqtt_message.topic.value
+        )
+        device_id = mqtt_topic_params["device_id"]
+
+        setup_context_vars(device_id, mqtt_topic_params["customer_id"])
+
+        kafka_topic, kafka_key, kafka_headers = self.get_kafka_message_params(
+            mqtt_topic_params,
+            conf.FSTATE_KAFKA_TOPIC,
+        )
+
+        await self.kafka_producer.send(
+            kafka_topic,
+            message=json.loads(bytes(mqtt_message.payload)),
+            key=kafka_key,
+            headers=kafka_headers,
+        )
+
+        return True
+
+    async def telemetry_handler(self, mqtt_message: Message):
         mqtt_topic = mqtt_message.topic.value
         mqtt_params = self.mqtt_topic_params_tmpl.to_dict(mqtt_message.topic.value)
         device_id = mqtt_params.get("device_id")
@@ -208,7 +233,8 @@ class Connector:
         setup_context_vars(device_id, mqtt_params.get("customer_id"))
 
         kafka_topic, kafka_key, kafka_headers = self.get_kafka_message_params(
-            mqtt_params
+            mqtt_params,
+            conf.TELEMETRY_KAFKA_TOPIC,
         )
         schema_id = int(dict(kafka_headers)["schema_id"])
         telemetry_msg_pack = await self.get_telemetry_message_pack(
@@ -227,7 +253,7 @@ class Connector:
 
 
 def main():
-    prometheus = Prometheus() if PROMETHEUS_PORT else None
+    prometheus = Prometheus() if conf.PROMETHEUS_PORT else None
     message_helper = MessageHelper(prometheus)
     producer = KafkaProducer(message_helper)
     mqtt_client = MQTTClient()

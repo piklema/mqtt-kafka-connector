@@ -13,9 +13,7 @@ customer_id_var = ContextVar(CUSTOMER_ID, default=0)
 
 
 def setup_context_vars(device_id: int, customer_id: int):
-    uuid_hex = uuid.uuid4().hex
-    message_uuid_var.set(uuid_hex)
-
+    message_uuid_var.set(uuid_hex := uuid.uuid4().hex)
     device_id_var.set(device_id)
     customer_id_var.set(customer_id)
 

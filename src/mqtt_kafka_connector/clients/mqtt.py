@@ -4,14 +4,7 @@ import typing
 
 import aiomqtt
 
-from mqtt_kafka_connector.conf import (
-    MQTT_CLIENT_ID,
-    MQTT_HOST,
-    MQTT_PASSWORD,
-    MQTT_PORT,
-    MQTT_TOPIC_SOURCE_MATCH,
-    MQTT_USER,
-)
+from mqtt_kafka_connector import conf
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +17,11 @@ class MQTTClient:
     async def start(self):
         self.loop = asyncio.get_running_loop()
         self.client = aiomqtt.Client(
-            hostname=MQTT_HOST,
-            port=MQTT_PORT,
-            username=MQTT_USER,
-            password=MQTT_PASSWORD,
-            identifier=MQTT_CLIENT_ID,
+            hostname=conf.MQTT_HOST,
+            port=conf.MQTT_PORT,
+            username=conf.MQTT_USER,
+            password=conf.MQTT_PASSWORD,
+            identifier=conf.MQTT_CLIENT_ID,
             clean_session=False,
             timeout=300,
         )
@@ -41,7 +34,9 @@ class MQTTClient:
             raise RuntimeError("Client is not initialized")
 
         async with self.client as cli:
-            await cli.subscribe(MQTT_TOPIC_SOURCE_MATCH, qos=1)
+            await cli.subscribe(conf.MQTT_TOPIC_SOURCE_MATCH, qos=1)  # customer/#
+            await cli.subscribe(conf.MQTT_FSTATE_SOURCE_MATCH, qos=1)  # fstate/#
+
             async for mqtt_message in cli.messages:
                 yield mqtt_message
                 # send ack
