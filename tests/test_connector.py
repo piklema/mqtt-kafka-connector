@@ -56,10 +56,12 @@ async def test_connector_telemetry_message(connector, message_pack):
     )
 
 
-async def test_connector_fstate_message(connector, message_pack):
+async def test_connector_fstate_message(connector):
+    now = dt.datetime.now().isoformat()
+    payload = f'{{"time": "{now}"}}'.encode()
     message = Message(
         topic=MQTT_FSTATE_TOPIC,
-        payload=b"{}",
+        payload=payload,
         qos=1,
         retain=False,
         mid=1,
@@ -69,3 +71,8 @@ async def test_connector_fstate_message(connector, message_pack):
     assert res is True
     assert customer_id_var.get() == CUSTOMER_ID
     assert device_id_var.get() == DEVICE_ID
+
+    assert connector.kafka_producer.producer.send_and_wait.call_count == 1
+    send_and_wait_call_args = connector.kafka_producer.producer.send_and_wait.call_args
+    assert send_and_wait_call_args.args[0] == "fstate"
+    assert send_and_wait_call_args.kwargs["value"] == payload

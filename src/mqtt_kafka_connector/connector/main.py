@@ -6,7 +6,7 @@ from collections import defaultdict
 
 import aiomqtt
 import fastavro
-import ujson as json
+import orjson
 from aiokafka.errors import KafkaConnectionError
 from aiomqtt.message import Message
 
@@ -100,7 +100,7 @@ class Connector:
 
         else:
             data = mqtt_message.payload
-            telemetry_msg_pack = json.loads(data.decode())["messages"]
+            telemetry_msg_pack = orjson.loads(data.decode())["messages"]
 
         if not telemetry_msg_pack:
             logger.warning("Messages is empty")
@@ -177,16 +177,16 @@ class Connector:
                 logger.warning(
                     "MQTT connection error %s. Reconnecting in %s seconds.",
                     err,
-                    RECONNECT_INTERVAL_SEC,
+                    conf.RECONNECT_INTERVAL_SEC,
                 )
-                await asyncio.sleep(RECONNECT_INTERVAL_SEC)
+                await asyncio.sleep(conf.RECONNECT_INTERVAL_SEC)
             except KafkaConnectionError as err:
                 logger.warning(
                     "Kafka connection error %s. Reconnecting in %s seconds.",
                     err,
-                    RECONNECT_INTERVAL_SEC,
+                    conf.RECONNECT_INTERVAL_SEC,
                 )
-                await asyncio.sleep(RECONNECT_INTERVAL_SEC)
+                await asyncio.sleep(conf.RECONNECT_INTERVAL_SEC)
             finally:
                 await self.kafka_producer.stop()
                 if self.prometheus:
@@ -202,7 +202,15 @@ class Connector:
             return False
 
     async def fstate_handler(self, mqtt_message: Message) -> bool:
-        logger.info("Start send to kafka topic=%s", mqtt_message.topic)
+        logger.info(
+            "fstate_handler mqtt_message topic=%r, payload=%r, qos=%r, retain=%r, mid=%r, properties=%r",
+            mqtt_message.topic,
+            mqtt_message.payload,
+            mqtt_message.qos,
+            mqtt_message.retain,
+            mqtt_message.mid,
+            mqtt_message.properties,
+        )
 
         mqtt_topic_params = self.mqtt_fstate_params_tmpl.to_dict(
             mqtt_message.topic.value
@@ -218,7 +226,11 @@ class Connector:
 
         await self.kafka_producer.send(
             kafka_topic,
-            message=json.loads(bytes(mqtt_message.payload)),
+            message=orjson.loads(
+                mqtt_message.payload.decode()
+                if isinstance(mqtt_message.payload, bytes)
+                else str(mqtt_message.payload)
+            ),
             key=kafka_key,
             headers=kafka_headers,
         )

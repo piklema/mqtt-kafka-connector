@@ -22,7 +22,7 @@ async def test_send_batch(kafka_producer, unpack_message_pack):
 
 async def test_send(kafka_producer, unpack_message_pack):
     result = await kafka_producer.send(
-        "topic", unpack_message_pack[0], b"key", [("header", b"value")]
+        "topic", unpack_message_pack[0], b"11", [("header", b"value")]
     )
 
     kafka_producer.producer.send_and_wait.assert_called_with(
@@ -30,8 +30,9 @@ async def test_send(kafka_producer, unpack_message_pack):
         value=kafka_producer.message_helper.prepare_msg_for_kafka(
             unpack_message_pack[0]
         ),
-        key=b"key",
+        key=b"11",
         headers=[("header", b"value")],
+        partition=0,
     )
     assert result is True
 

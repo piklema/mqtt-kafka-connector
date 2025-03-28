@@ -22,9 +22,7 @@ class MessageHelper:
         self.prometheus = prometheus
 
     def _check_message_interval(self, msg: dict) -> bool:
-        msg_time = msg.get("time")
-
-        if not msg_time:
+        if not (msg_time := msg.get("time")):
             logger.warning("Message has no time field")
             return False
 
@@ -60,9 +58,10 @@ class MessageHelper:
             if not self._check_message_interval(msg=raw_msg):
                 return None
 
-        except Exception as e:
-            logger.exception("Error while preparing message for Kafka: %s", e)
+        except Exception as exc:
+            logger.exception("Error while preparing message for Kafka: %r", exc)
             return None
+
         return msg_for_kafka
 
 
@@ -133,8 +132,24 @@ class KafkaProducer:
         headers: list,
     ) -> bool:
         value = self.message_helper.prepare_msg_for_kafka(message)
-        res = await self.producer.send_and_wait(
-            topic, value=value, key=key, headers=headers
+
+        if value is None:
+            return False
+
+        partition = await self.get_partition(topic, key)
+        logging.debug(
+            "Send message to topic %r, key %r, partition %r, headers %r, value %r",
+            topic,
+            key,
+            partition,
+            headers,
+            value,
         )
-        logger.info("1 message sent with key %s to partition %s", key, res.partition)
+        await self.producer.send_and_wait(
+            topic,
+            value=value,
+            key=key,
+            headers=headers,
+            partition=partition,
+        )
         return True

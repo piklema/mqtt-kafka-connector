@@ -119,7 +119,7 @@ LOGGING = {
     "formatters": {
         "verbose": {
             "format": "%(asctime)s - [%(levelname)s] - %(name)s - "
-            "(%(filename)s).%(funcName)s:%(lineno)d - %(message)s",
+            "%(pathname)s:%(lineno)d (%(funcName)s) - %(message)s",
         },
     },
     "handlers": {
