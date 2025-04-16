@@ -53,7 +53,9 @@ lint: ## check style
 	ruff check
 
 format: ## format style
-	ruff format && ruff check --fix
+	ruff check --select I --fix .
+	ruff check --fix .
+	ruff format .
 
 test: ## run tests quickly with the default Python
 	set -a && source .env.example && set +a; \
@@ -86,4 +88,3 @@ requirements_uninstall: ##
 
 requirements_install:  ##
 	@pip install -r ./requirements_dev.txt --quiet
-
