@@ -13,9 +13,7 @@ from mqtt_kafka_connector.services.prometheus import Prometheus
 
 @pytest.fixture()
 def now_timestamp():
-    return int(
-        datetime.datetime.now(datetime.timezone.utc).timestamp() * 1_000
-    )
+    return int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1_000)
 
 
 @pytest.fixture()
@@ -70,7 +68,7 @@ def message_pack(payload):
 
 @pytest.fixture()
 def unpack_message_pack(payload, now_timestamp):
-    return [{'time': datetime.datetime.now()}] * 2
+    return [{"time": datetime.datetime.now()}] * 2
 
 
 @pytest.fixture()
@@ -95,8 +93,8 @@ def kafka_producer(prometheus):
     mock_producer.create_batch = MagicMock()
     mock_producer.create_batch.return_value.append.side_effect = [
         None,
-        '1',
-        'metadata',
+        "1",
+        "metadata",
     ]
     mock_producer.partitions_for = AsyncMock(return_value=[0])
 
@@ -121,7 +119,7 @@ async def mqtt_client(monkeypatch, message_pack):
     mock_client.messages.__aiter__.return_value = iter(
         [
             Message(
-                'topic',
+                "topic",
                 payload=message_pack.serialize(),
                 qos=1,
                 retain=True,
@@ -133,5 +131,5 @@ async def mqtt_client(monkeypatch, message_pack):
     mock_client.subscribe = AsyncMock()
 
     mqtt_client = MagicMock(return_value=mock_client)
-    monkeypatch.setattr('aiomqtt.Client', mqtt_client)
+    monkeypatch.setattr("aiomqtt.Client", mqtt_client)
     return mqtt_client
