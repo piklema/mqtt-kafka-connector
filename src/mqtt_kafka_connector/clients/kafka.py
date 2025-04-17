@@ -97,11 +97,10 @@ class KafkaProducer:
             if metadata is None:
                 partition = await self.get_partition(topic, key)
                 fut = await self.producer.send_batch(batch, topic, partition=partition)
-                res = await fut
+                await fut
                 logger.info(
-                    "Sent batch %s messages sent to partition %s",
+                    "Sent batch %s messages",
                     batch.record_count(),
-                    res.partition,
                 )
                 batch = self.producer.create_batch()
                 continue
@@ -109,11 +108,10 @@ class KafkaProducer:
 
         partition = await self.get_partition(topic, key)
         fut = await self.producer.send_batch(batch, topic, partition=partition)
-        res = await fut
+        await fut
         logger.info(
-            "Sent batch %s messages to partition %s",
+            "Sent batch %s messages",
             batch.record_count(),
-            res.partition,
         )
 
     async def send(

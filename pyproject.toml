@@ -1,56 +1,55 @@
 [project]
-authors = [{name = "Piklema Team"}]
-dependencies = [
-    "aiocache>=0.12.3,<0.13",
-    "aiohttp>=3.11.14,<4",
-    "aiokafka>=0.12.0,<0.13",
-    "aiomqtt>=2.3.0,<3",
-    "aioprometheus>=23.12.0,<24",
-    "dataclasses-avroschema>=0.65.10,<0.66",
-    "httpx>=0.28.1,<0.29",
-    "python-dotenv>=1.1.0,<2",
-    "sentry-sdk>=2.24.1,<3",
-    "ujson>=5.10.0,<6",
-]
 name = "mqtt-kafka-connector"
-requires-python = "~= 3.13"
 version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = "~=3.12"
+dependencies = [
+    "aiocache>=0.12.3",
+    "aiohttp>=3.11.16",
+    "aiokafka>=0.12.0",
+    "aiomqtt>=2.3.2",
+    "aioprometheus>=23.12.0",
+    "aiosignal>=1.3.2",
+    "anyio>=4.9.0",
+    "async-timeout>=5.0.1",
+    "attrs>=25.3.0",
+    "casefy>=1.0.0",
+    "certifi>=2025.1.31",
+    "dacite>=1.9.2",
+    "dataclasses-avroschema>=0.65.10",
+    "fastavro>=1.10.0",
+    "frozenlist>=1.5.0",
+    "h11>=0.14.0",
+    "httpcore>=1.0.8",
+    "httpx>=0.28.1",
+    "idna>=3.10",
+    "inflector>=3.1.1",
+    "multidict>=6.4.3",
+    "orjson>=3.10.16",
+    "packaging>=24.2",
+    "paho-mqtt>=2.1.0",
+    "python-dotenv>=1.1.0",
+    "quantile-python>=1.1",
+    "sentry-sdk>=2.26.1",
+    "sniffio>=1.3.1",
+    "typing-extensions>=4.13.2",
+    "urllib3>=2.4.0",
+    "yarl>=1.19.0",
+]
 
-[build-system]
-build-backend = "hatchling.build"
-requires = ["hatchling"]
-
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "deepdiff",
-    "pytest-asyncio",
-    "pytest-cov",
-    "pytest-env",
-    "pytest",
-    "ruff"
+    "deepdiff>=8.4.2",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
+    "pytest-cov>=6.1.1",
+    "pytest-env>=1.1.5",
+    "ruff>=0.11.5",
 ]
 
 [project.scripts]
-mqtt_kafka_connector = "mqtt_kafka_connector.connector.main:main"
-mqtt_produce = "mqtt_kafka_connector.connector.producer:main"
+mkc = "mqtt_kafka_connector.connector.main:main"
 
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-
-[tool.ruff]
-line-length = 88
-src = ["src/mqtt_kafka_connector"]
-
-[tool.ruff.lint]
-extend-select = ["I"]
-
-[tool.pixi.project]
-channels = ["conda-forge"]
-platforms = ["osx-arm64", "linux-64"]
-
-[tool.pixi.pypi-dependencies]
-mqtt_kafka_connector = { path = ".", editable = true }
-
-[tool.pixi.environments]
-default = { solve-group = "default" }
-dev = { features = ["dev"], solve-group = "default" }
+[tool.uv]
+package = true
