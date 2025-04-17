@@ -1,0 +1,63 @@
+include:
+- project:  "piklema/devops/internal/cicd/gitlab-ci"
+  file:     "common.yml"
+  ref:      "1.0.19"
+- project:  "piklema/devops/internal/cicd/gitlab-ci"
+  file:     "semver.yml"
+  ref:      "1.0.19"
+- project:  "piklema/devops/internal/cicd/gitlab-ci"
+  file:     "docker.yml"
+  ref:      "1.0.19"
+- project:  "piklema/devops/internal/cicd/gitlab-ci"
+  file:     "deploy.yml"
+  ref:      "1.0.19"
+
+stages:
+- tag
+- publish
+
+variables:
+  APP_NAME:                 "mqtt-kafka-connector"
+
+Prebuild:
+  stage: publish
+  extends: .piklema.docker.build_publish_tag
+  variables:
+    DOCKER_BUILD_FILE:  "ForCI.Dockerfile"
+    DOCKER_BUILD_OPTS:  "--build-arg ENV_FILE=.env.dev"
+    DOCKER_PUSH:        "false"
+  rules:
+    - if: $CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH == "release"
+      when: never
+    - !reference [ .default_rules, on_branch ]
+    
+Publish DEV:
+  stage: publish
+  extends: .piklema.docker.build_publish_tag
+  variables:
+    DOCKER_BUILD_FILE:  "ForCI.Dockerfile"
+    DOCKER_BUILD_OPTS:  "--build-arg ENV_FILE=.env.dev"
+    ENV: dev
+  rules:
+  - !reference [ .default_rules, on_dev ]
+
+Publish RELEASE:
+  stage: publish
+  extends: .piklema.docker.build_publish_tag
+  variables:
+    DOCKER_BUILD_FILE:  "ForCI.Dockerfile"
+    DOCKER_BUILD_OPTS:  "--build-arg ENV_FILE=.env.prod"
+    ENV: dev
+  rules:
+  - if: $CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH == "release"
+    variables:
+      ENV: dev
+
+Publish PROD:
+  stage: publish
+  extends: .piklema.docker.build_publish_tag
+  variables:
+    DOCKER_BUILD_FILE: "ForCI.Dockerfile"
+    DOCKER_BUILD_OPTS:  "--build-arg ENV_FILE=.env.prod"
+  rules:
+  - !reference [ .default_rules, on_tag ]
