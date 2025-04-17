@@ -1,27 +1,31 @@
-FROM python:3.11-alpine as builder
+# Use a Python image with uv pre-installed
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
-ENV VIRTUAL_ENV=/usr/local
-
-RUN apk update && apk add gcc \
-                          libc-dev \
-                          zlib-dev
-
-ADD https://astral.sh/uv/install.sh /install.sh
-RUN chmod -R 655 /install.sh && /install.sh && rm /install.sh
-
-COPY requirements.txt .
-
-RUN /root/.cargo/bin/uv pip install --system --no-cache -r requirements.txt
-
-FROM python:3.11-alpine
-
-ARG RELEASE_VERSION
-ENV RELEASE_VERSION=${RELEASE_VERSION}
-
-COPY --from=builder /usr/local /usr/local
-COPY . /app
+# Install the project into `/app`
 WORKDIR /app
 
-RUN pip install -e .
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=1
 
-ENTRYPOINT ["mqtt_kafka_connector"]
+# Copy from the cache instead of linking since it's a mounted volume
+ENV UV_LINK_MODE=copy
+
+# Install the project's dependencies using the lockfile and settings
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --frozen --no-install-project --no-dev
+
+# Then, add the rest of the project source code and install it
+# Installing separately from its dependencies allows optimal layer caching
+ADD . /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen
+
+# Place executables in the environment at the front of the path
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Reset the entrypoint, don't invoke `uv`
+ENTRYPOINT []
+
+CMD ["mkc"]

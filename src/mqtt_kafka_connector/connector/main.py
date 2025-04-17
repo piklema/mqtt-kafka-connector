@@ -223,12 +223,11 @@ class Connector:
 
         setup_context_vars(device_id, mqtt_topic_params["customer_id"])
 
-        kafka_topic, kafka_key, kafka_headers = self.get_kafka_message_params(
-            mqtt_topic_params,
-            conf.FSTATE_KAFKA_TOPIC,
-        )
-
         try:
+            kafka_topic, kafka_key, kafka_headers = self.get_kafka_message_params(
+                mqtt_topic_params,
+                conf.FSTATE_KAFKA_TOPIC,
+            )
             message = orjson.loads(
                 mqtt_message.payload.decode()
                 if isinstance(mqtt_message.payload, bytes)
@@ -236,6 +235,9 @@ class Connector:
             )
         except orjson.JSONDecodeError as err:
             logger.error("Failed to decode JSON: %s", err)
+            return False
+        except KeyError as err:
+            logger.error("Key not found in topic params %r: %s", mqtt_topic_params, err)
             return False
 
         await self.kafka_producer.send(
@@ -247,17 +249,22 @@ class Connector:
 
         return True
 
-    async def telemetry_handler(self, mqtt_message: Message):
+    async def telemetry_handler(self, mqtt_message: Message) -> bool:
         mqtt_topic = mqtt_message.topic.value
         mqtt_params = self.mqtt_topic_params_tmpl.to_dict(mqtt_message.topic.value)
         device_id = mqtt_params.get("device_id")
 
         setup_context_vars(device_id, mqtt_params.get("customer_id"))
 
-        kafka_topic, kafka_key, kafka_headers = self.get_kafka_message_params(
-            mqtt_params,
-            conf.TELEMETRY_KAFKA_TOPIC,
-        )
+        try:
+            kafka_topic, kafka_key, kafka_headers = self.get_kafka_message_params(
+                mqtt_params,
+                conf.TELEMETRY_KAFKA_TOPIC,
+            )
+        except KeyError as err:
+            logger.error("Key not found in topic params %r: %s", mqtt_params, err)
+            return False
+
         schema_id = int(dict(kafka_headers)["schema_id"])
         telemetry_msg_pack = await self.get_telemetry_message_pack(
             mqtt_message, schema_id
