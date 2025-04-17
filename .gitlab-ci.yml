@@ -23,7 +23,7 @@ Prebuild:
   stage: publish
   extends: .piklema.docker.build_publish_tag
   variables:
-    DOCKER_BUILD_FILE:  "ForCI.Dockerfile"
+    DOCKER_BUILD_FILE:  "Dockerfile"
     DOCKER_BUILD_OPTS:  "--build-arg ENV_FILE=.env.dev"
     DOCKER_PUSH:        "false"
   rules:
@@ -35,7 +35,7 @@ Publish DEV:
   stage: publish
   extends: .piklema.docker.build_publish_tag
   variables:
-    DOCKER_BUILD_FILE:  "ForCI.Dockerfile"
+    DOCKER_BUILD_FILE:  "Dockerfile"
     DOCKER_BUILD_OPTS:  "--build-arg ENV_FILE=.env.dev"
     ENV: dev
   rules:
@@ -45,7 +45,7 @@ Publish RELEASE:
   stage: publish
   extends: .piklema.docker.build_publish_tag
   variables:
-    DOCKER_BUILD_FILE:  "ForCI.Dockerfile"
+    DOCKER_BUILD_FILE:  "Dockerfile"
     DOCKER_BUILD_OPTS:  "--build-arg ENV_FILE=.env.prod"
     ENV: dev
   rules:
@@ -57,7 +57,7 @@ Publish PROD:
   stage: publish
   extends: .piklema.docker.build_publish_tag
   variables:
-    DOCKER_BUILD_FILE: "ForCI.Dockerfile"
+    DOCKER_BUILD_FILE: "Dockerfile"
     DOCKER_BUILD_OPTS:  "--build-arg ENV_FILE=.env.prod"
   rules:
   - !reference [ .default_rules, on_tag ]
