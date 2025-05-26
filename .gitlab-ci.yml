@@ -1,16 +1,16 @@
 include:
 - project:  "piklema/devops/internal/cicd/gitlab-ci"
   file:     "common.yml"
-  ref:      "1.0.19"
+  ref:      "1.0.24"
 - project:  "piklema/devops/internal/cicd/gitlab-ci"
   file:     "semver.yml"
-  ref:      "1.0.19"
+  ref:      "1.0.24"
 - project:  "piklema/devops/internal/cicd/gitlab-ci"
   file:     "docker.yml"
-  ref:      "1.0.19"
+  ref:      "1.0.24"
 - project:  "piklema/devops/internal/cicd/gitlab-ci"
   file:     "deploy.yml"
-  ref:      "1.0.19"
+  ref:      "1.0.24"
 
 stages:
 - tag
