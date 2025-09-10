@@ -100,7 +100,9 @@ class TelemetryHandler(MessageHandler):
                 conf.TELEMETRY_KAFKA_TOPIC,
             )
         except KeyError as err:
-            logger.error("Key not found in topic params %r: %s", mqtt_params, err)
+            logger.error(
+                "Ключ не найден в параметрах топика %r: %s", mqtt_params, err
+            )
             return False
 
         schema_id = int(dict(kafka_headers)["schema_id"])
@@ -134,16 +136,16 @@ class TelemetryHandler(MessageHandler):
         schema = await self.schema_client.get_schema(schema_id)
 
         if not schema:
-            raise RuntimeError("Schema not found")
+            raise RuntimeError("Схема не найдена")
 
         fp = io.BytesIO(msg.payload)
         try:
             parsed_schema = fastavro.parse_schema(schema)
             data = fastavro.schemaless_reader(fp, parsed_schema)
         except (IndexError, StopIteration, EOFError):
-            raise RuntimeError("Message is not valid")
+            raise RuntimeError("Сообщение не валидно")
 
-        logger.debug("Message deserialized: data=%s", data)
+        logger.debug("Сообщение десериализовано: data=%s", data)
 
         return data
 
@@ -167,12 +169,12 @@ class TelemetryHandler(MessageHandler):
             self.last_messages[mqtt_topic] = last_message
         else:
             logger.info(
-                "Message pack from %s already sending. Skip sending to kafka",
+                "Пакет сообщений из %s уже отправляется. Пропуск отправки в kafka",
                 mqtt_topic,
             )
             return False
 
-        logger.info("Receive %s messages from %s", messages_count, mqtt_topic)
+        logger.info("Получено %s сообщений из %s", messages_count, mqtt_topic)
         return True
 
     async def get_telemetry_message_pack(
@@ -193,7 +195,7 @@ class TelemetryHandler(MessageHandler):
         mqtt_topic = mqtt_message.topic
 
         logger.debug(
-            "Message received from "
+            "Получено сообщение из "
             "mqtt_topic.value=%s message.payload=%s message.qos=%s",
             mqtt_topic.value,
             mqtt_message.payload,
@@ -209,7 +211,7 @@ class TelemetryHandler(MessageHandler):
             telemetry_msg_pack = orjson.loads(data.decode())["messages"]
 
         if not telemetry_msg_pack:
-            logger.warning("Messages is empty")
+            logger.warning("Пустой пакет сообщений")
             return
 
         return telemetry_msg_pack
@@ -231,7 +233,7 @@ class TelemetryHandler(MessageHandler):
             kafka_headers: Заголовки сообщения.
         """
         logger.info(
-            "Start send to kafka topic=%s, key=%s", kafka_topic, int(kafka_key)
+            "Начало отправки в kafka topic=%s, key=%s", kafka_topic, int(kafka_key)
         )
 
         if conf.KAFKA_SEND_BATCHES:
@@ -272,7 +274,7 @@ class FStateHandler(MessageHandler):
             True, если сообщение было успешно обработано, иначе False.
         """
         logger.info(
-            "fstate_handler mqtt_message topic=%r, payload=%r, qos=%r, retain=%r, mid=%r, properties=%r",
+            "Обработчик сообщений о состоянии mqtt_message topic=%r, payload=%r, qos=%r, retain=%r, mid=%r, properties=%r",
             mqtt_message.topic,
             mqtt_message.payload,
             mqtt_message.qos,
@@ -288,7 +290,7 @@ class FStateHandler(MessageHandler):
             device_id = mqtt_topic_params["device_id"]
         except KeyError:
             logger.error(
-                "Device ID not found in topic params %r", mqtt_topic_params
+                "В параметрах топика %r не найден ID устройства", mqtt_topic_params
             )
             return False
 
@@ -309,11 +311,11 @@ class FStateHandler(MessageHandler):
                 else str(mqtt_message.payload)
             )
         except orjson.JSONDecodeError as err:
-            logger.error("Failed to decode JSON: %s", err)
+            logger.error("Ошибка декодирования JSON: %s", err)
             return False
         except KeyError as err:
             logger.error(
-                "Key not found in topic params %r: %s", mqtt_topic_params, err
+                "Ключ не найден в параметрах топика %r: %s", mqtt_topic_params, err
             )
             return False
 
@@ -342,5 +344,5 @@ class TopicRouter:
         elif mqtt_message.topic.matches(conf.MQTT_FSTATE_SOURCE_MATCH):
             return await self.fstate_handler.handle(mqtt_message)
         else:
-            logger.warning("Unknown topic %s", mqtt_message.topic)
+            logger.warning("Неизвестный топик %s", mqtt_message.topic)
             return False

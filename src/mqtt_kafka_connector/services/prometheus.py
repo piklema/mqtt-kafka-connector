@@ -15,17 +15,17 @@ class Prometheus:
         self.service = None
         self.messages_counter = Counter(
             "messages_from_devices_count",
-            "Count of messages.",
+            "Количество сообщений от устройств.",
         )
         self.telemetry_message_lag = Summary(
             "telemetry_message_lag_seconds",
-            "Time lag between message time and current time.",
+            "Задержка между временем сообщения и текущим временем.",
         )
 
     async def start(self):
         self.service = Service()
         await self.service.start(addr="0.0.0.0", port=PROMETHEUS_PORT)
-        logger.info("Prometheus Service is running")
+        logger.info("Сервис Prometheus запущен")
 
     def _add(self, metric, value: float):
         if self.service:

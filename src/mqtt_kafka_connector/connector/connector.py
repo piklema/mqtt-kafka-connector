@@ -43,7 +43,7 @@ class Connector:
         """
         Основной цикл работы коннектора.
         """
-        logger.info("Connector starting...")
+        logger.info("Запуск коннектора...")
         while True:
             try:
                 if self.prometheus:
@@ -55,18 +55,18 @@ class Connector:
                     try:
                         await self.handle(mqtt_message)
                     except RuntimeError as err:
-                        logger.error("Runtime error: %s", err)
+                        logger.error("Ошибка выполнения: %s", err)
 
             except aiomqtt.MqttError as err:
                 logger.warning(
-                    "MQTT connection error %s. Reconnecting in %s seconds.",
+                    "Ошибка подключения к MQTT %s. Повторное подключение через %s секунд.",
                     err,
                     conf.RECONNECT_INTERVAL_SEC,
                 )
                 await asyncio.sleep(conf.RECONNECT_INTERVAL_SEC)
             except KafkaConnectionError as err:
                 logger.warning(
-                    "Kafka connection error %s. Reconnecting in %s seconds.",
+                    "Ошибка подключения к Kafka %s. Повторное подключение через %s секунд.",
                     err,
                     conf.RECONNECT_INTERVAL_SEC,
                 )

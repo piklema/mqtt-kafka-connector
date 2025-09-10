@@ -27,11 +27,11 @@ class MQTTClient:
         )
         # setup manual ack
         self.loop.run_in_executor(None, self.client._client.manual_ack_set, True)
-        logger.info("MQTT Client is running")
+        logger.info("Клиент MQTT запущен")
 
     async def get_messages(self) -> typing.AsyncIterator[aiomqtt.Message]:
         if self.client is None:
-            raise RuntimeError("Client is not initialized")
+            raise RuntimeError("Клиент не инициализирован")
 
         async with self.client as cli:
             await cli.subscribe(conf.MQTT_TOPIC_SOURCE_MATCH, qos=1)  # customer/#

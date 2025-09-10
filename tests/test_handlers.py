@@ -106,7 +106,7 @@ async def test_topic_router_unknown(
 
     fstate_handler_mock.handle.assert_not_called()
     telemetry_handler_mock.handle.assert_not_called()
-    assert "Unknown topic" in caplog.text
+    assert "Неизвестный топик" in caplog.text
 
 
 async def test_telemetry_handler(telemetry_handler, message_pack):
@@ -163,7 +163,7 @@ async def test_fstate_handler_not_valid_json(fstate_handler, caplog):
     )
     res = await fstate_handler.handle(message)
     assert res is False
-    assert "Failed to decode JSON" in caplog.text
+    assert "Ошибка декодирования JSON" in caplog.text
 
 
 async def test_fstate_handler_with_bad_topic(fstate_handler, caplog):
@@ -174,4 +174,4 @@ async def test_fstate_handler_with_bad_topic(fstate_handler, caplog):
     )
     res = await fstate_handler.handle(message)
     assert res is False
-    assert "Device ID not found in topic params" in caplog.text
+    assert "не найден ID устройства" in caplog.text

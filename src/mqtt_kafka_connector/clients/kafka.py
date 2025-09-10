@@ -17,7 +17,7 @@ class MessageHelper:
 
     def _check_message_interval(self, msg: dict) -> bool:
         if not (msg_time := msg.get("time")):
-            logger.warning("Message has no time field")
+            logger.warning("В сообщении нет поля time")
             return False
 
         if isinstance(msg_time, str):
@@ -32,7 +32,7 @@ class MessageHelper:
         )
 
         if not early <= msg_time <= late:
-            logger.info("Message time is out of interval")
+            logger.info("Время сообщения вне допустимого интервала")
             return False
         return True
 
@@ -53,7 +53,7 @@ class MessageHelper:
                 return None
 
         except Exception as exc:
-            logger.exception("Error while preparing message for Kafka: %r", exc)
+            logger.exception("Ошибка при подготовке сообщения для Kafka: %r", exc)
             return None
 
         return msg_for_kafka
@@ -69,7 +69,7 @@ class KafkaProducer:
             bootstrap_servers=conf.KAFKA_BOOTSTRAP_SERVERS,
         )
         await self.producer.start()
-        logger.info("Kafka Producer is running")
+        logger.info("Продюсер Kafka запущен")
 
     async def stop(self):
         await self.producer.stop()
@@ -99,7 +99,7 @@ class KafkaProducer:
                 fut = await self.producer.send_batch(batch, topic, partition=partition)
                 await fut
                 logger.info(
-                    "Sent batch %s messages",
+                    "Отправлено %s сообщений в батче",
                     batch.record_count(),
                 )
                 batch = self.producer.create_batch()
@@ -110,7 +110,7 @@ class KafkaProducer:
         fut = await self.producer.send_batch(batch, topic, partition=partition)
         await fut
         logger.info(
-            "Sent batch %s messages",
+            "Отправлено %s сообщений в батче",
             batch.record_count(),
         )
 
@@ -125,7 +125,7 @@ class KafkaProducer:
             return False
 
         logging.debug(
-            "Send message to topic %r, key %r, headers %r, value %r",
+            "Отправка сообщения в топик %r, ключ %r, заголовки %r, значение %r",
             topic,
             key,
             headers,
