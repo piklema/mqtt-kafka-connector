@@ -53,3 +53,6 @@ mkc = "mqtt_kafka_connector.connector.main:main"
 
 [tool.uv]
 package = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
