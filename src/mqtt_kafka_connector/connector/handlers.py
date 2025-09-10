@@ -25,6 +25,21 @@ class BaseHandler:
 
 
 class MessageHandler(BaseHandler):
+    def __init__(self, kafka_producer: "KafkaProducer"):
+        self.kafka_producer = kafka_producer
+
+    def _setup_vars(self, message: Message, template: str) -> dict | None:
+        mqtt_params = Template(template).to_dict(message.topic.value)
+        device_id = mqtt_params.get("device_id")
+        if not device_id:
+            logger.error(
+                "В параметрах топика %r не найден ID устройства", mqtt_params
+            )
+            return None
+
+        setup_context_vars(device_id, mqtt_params.get("customer_id"))
+        return mqtt_params
+
     @staticmethod
     def get_kafka_message_params(
         mqtt_topic_params: dict,
@@ -66,10 +81,9 @@ class TelemetryHandler(MessageHandler):
         schema_client: "SchemaClient",
         prometheus: "Prometheus" | None = None,
     ):
-        self.kafka_producer = kafka_producer
+        super().__init__(kafka_producer)
         self.schema_client = schema_client
         self.prometheus = prometheus
-        self.mqtt_topic_params_tmpl = Template(settings.MQTT_TOPIC_SOURCE_TEMPLATE)
         self.last_messages = defaultdict(dict)
 
     async def handle(self, mqtt_message: Message) -> bool:
@@ -82,13 +96,10 @@ class TelemetryHandler(MessageHandler):
         Returns:
             True, если сообщение было успешно обработано, иначе False.
         """
-        mqtt_topic = mqtt_message.topic.value
-        mqtt_params = self.mqtt_topic_params_tmpl.to_dict(
-            mqtt_message.topic.value
-        )
-        device_id = mqtt_params.get("device_id")
-
-        setup_context_vars(device_id, mqtt_params.get("customer_id"))
+        if not (mqtt_params := self._setup_vars(
+            mqtt_message, settings.MQTT_TOPIC_SOURCE_TEMPLATE
+        )):
+            return False
 
         try:
             (
@@ -109,7 +120,7 @@ class TelemetryHandler(MessageHandler):
         telemetry_msg_pack = await self.get_telemetry_message_pack(
             mqtt_message, schema_id
         )
-        if self.check_telemetry_messages_pack(mqtt_topic, telemetry_msg_pack):
+        if self.check_telemetry_messages_pack(mqtt_message.topic.value, telemetry_msg_pack):
             await self.kafka_handler(
                 telemetry_msg_pack,
                 kafka_topic,
@@ -257,12 +268,6 @@ class TelemetryHandler(MessageHandler):
 
 
 class FStateHandler(MessageHandler):
-    def __init__(self, kafka_producer: "KafkaProducer"):
-        self.kafka_producer = kafka_producer
-        self.mqtt_fstate_params_tmpl = Template(
-            settings.MQTT_FSTATE_SOURCE_TEMPLATE
-        )
-
     async def handle(self, mqtt_message: Message) -> bool:
         """
         Обработчик сообщений о состоянии.
@@ -283,18 +288,10 @@ class FStateHandler(MessageHandler):
             mqtt_message.properties,
         )
 
-        mqtt_topic_params = self.mqtt_fstate_params_tmpl.to_dict(
-            mqtt_message.topic.value
-        )
-        try:
-            device_id = mqtt_topic_params["device_id"]
-        except KeyError:
-            logger.error(
-                "В параметрах топика %r не найден ID устройства", mqtt_topic_params
-            )
+        if not (mqtt_params := self._setup_vars(
+            mqtt_message, settings.MQTT_FSTATE_SOURCE_TEMPLATE
+        )):
             return False
-
-        setup_context_vars(device_id, mqtt_topic_params["customer_id"])
 
         try:
             (
@@ -302,7 +299,7 @@ class FStateHandler(MessageHandler):
                 kafka_key,
                 kafka_headers,
             ) = self.get_kafka_message_params(
-                mqtt_topic_params,
+                mqtt_params,
                 settings.FSTATE_KAFKA_TOPIC,
             )
             message = orjson.loads(
@@ -315,7 +312,7 @@ class FStateHandler(MessageHandler):
             return False
         except KeyError as err:
             logger.error(
-                "Ключ не найден в параметрах топика %r: %s", mqtt_topic_params, err
+                "Ключ не найден в параметрах топика %r: %s", mqtt_params, err
             )
             return False
 
