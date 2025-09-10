@@ -3,6 +3,7 @@ import dataclasses
 import datetime
 from unittest.mock import AsyncMock, MagicMock
 
+import orjson
 import pytest
 from aiomqtt.message import Message
 from aioprometheus import REGISTRY
@@ -54,6 +55,10 @@ class DummyResponse:
     def __init__(self, status_code, data):
         self.status_code = status_code
         self.data = data
+
+    @property
+    def text(self):
+        return orjson.dumps(self.data)
 
     def json(self):
         return self.data

@@ -1,9 +1,9 @@
 import functools
 import logging
 import typing
-from json import JSONDecodeError
 
 import httpx
+import orjson
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class BaseHTTPClient:
                     url, headers=self.headers, **kwargs
                 )
                 resp.raise_for_status()
-                resp_json = resp.json()
+                resp_json = orjson.loads(resp.text)
 
                 logger.info("HTTP-ответ: %r", resp_json)
 
@@ -39,7 +39,7 @@ class BaseHTTPClient:
             except httpx.HTTPError as exc:
                 logger.exception("HTTP-ошибка: %r", exc)
 
-            except JSONDecodeError as exc:
+            except orjson.JSONDecodeError as exc:
                 logger.error("Ошибка декодирования JSON: %r", exc)
 
     get: typing.Callable = functools.partialmethod(request, method="get")
