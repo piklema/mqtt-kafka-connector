@@ -2,7 +2,7 @@ import datetime as dt
 
 import pytest
 
-from mqtt_kafka_connector import conf
+from mqtt_kafka_connector.settings import settings
 
 
 async def test_send_batch(kafka_producer, unpack_message_pack):
@@ -41,12 +41,12 @@ async def test_send(kafka_producer, unpack_message_pack):
         (dt.datetime.now(), True),
         (
             dt.datetime.now()
-            - dt.timedelta(hours=conf.MIN_TELEMETRY_INTERVAL_AGE_HOURS),
+            - dt.timedelta(hours=settings.MIN_TELEMETRY_INTERVAL_AGE_HOURS),
             False,
         ),
         (
             dt.datetime.now()
-            + dt.timedelta(hours=1, minutes=conf.MAX_TELEMETRY_INTERVAL_AGE_HOURS),
+            + dt.timedelta(hours=1, minutes=settings.MAX_TELEMETRY_INTERVAL_AGE_HOURS),
             False,
         ),
         (

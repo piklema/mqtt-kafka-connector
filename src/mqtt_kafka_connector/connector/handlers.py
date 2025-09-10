@@ -9,7 +9,7 @@ import fastavro
 import orjson
 from aiomqtt.message import Message
 
-from mqtt_kafka_connector import conf
+from mqtt_kafka_connector.settings import settings
 from mqtt_kafka_connector.context_vars import message_uuid_var, setup_context_vars
 from mqtt_kafka_connector.utils import Template
 
@@ -41,19 +41,19 @@ class MessageHandler(BaseHandler):
             Кортеж с именем топика, ключом и заголовками для Kafka.
         """
         kafka_topic = topic_name_tpl.format(**mqtt_topic_params)
-        kafka_key = conf.KAFKA_KEY_TEMPLATE.format(**mqtt_topic_params).encode()
+        kafka_key = settings.KAFKA_KEY_TEMPLATE.format(**mqtt_topic_params).encode()
         kafka_headers = [
             (k, v.encode())
             for k, v in mqtt_topic_params.items()
-            if k in conf.KAFKA_HEADERS_LIST.split(",")
+            if k in settings.KAFKA_HEADERS_LIST.split(",")
         ]
 
-        if conf.WITH_MESSAGE_DESERIALIZE:
+        if settings.WITH_MESSAGE_DESERIALIZE:
             kafka_headers.append(("message_deserialized", b"1"))
 
-        if conf.TRACE_HEADER:
+        if settings.TRACE_HEADER:
             kafka_headers.append(
-                (conf.TRACE_HEADER, message_uuid_var.get().encode())
+                (settings.TRACE_HEADER, message_uuid_var.get().encode())
             )
 
         return kafka_topic, kafka_key, kafka_headers
@@ -69,7 +69,7 @@ class TelemetryHandler(MessageHandler):
         self.kafka_producer = kafka_producer
         self.schema_client = schema_client
         self.prometheus = prometheus
-        self.mqtt_topic_params_tmpl = Template(conf.MQTT_TOPIC_SOURCE_TEMPLATE)
+        self.mqtt_topic_params_tmpl = Template(settings.MQTT_TOPIC_SOURCE_TEMPLATE)
         self.last_messages = defaultdict(dict)
 
     async def handle(self, mqtt_message: Message) -> bool:
@@ -97,7 +97,7 @@ class TelemetryHandler(MessageHandler):
                 kafka_headers,
             ) = self.get_kafka_message_params(
                 mqtt_params,
-                conf.TELEMETRY_KAFKA_TOPIC,
+                settings.TELEMETRY_KAFKA_TOPIC,
             )
         except KeyError as err:
             logger.error(
@@ -202,7 +202,7 @@ class TelemetryHandler(MessageHandler):
             mqtt_message.qos,
         )
 
-        if conf.WITH_MESSAGE_DESERIALIZE:
+        if settings.WITH_MESSAGE_DESERIALIZE:
             mqtt_msg_dict = await self.deserialize(mqtt_message, schema_id)
             telemetry_msg_pack = mqtt_msg_dict["messages"]
 
@@ -236,7 +236,7 @@ class TelemetryHandler(MessageHandler):
             "Начало отправки в kafka topic=%s, key=%s", kafka_topic, int(kafka_key)
         )
 
-        if conf.KAFKA_SEND_BATCHES:
+        if settings.KAFKA_SEND_BATCHES:
             await self.kafka_producer.send_batch(
                 kafka_topic,
                 messages,
@@ -260,7 +260,7 @@ class FStateHandler(MessageHandler):
     def __init__(self, kafka_producer: "KafkaProducer"):
         self.kafka_producer = kafka_producer
         self.mqtt_fstate_params_tmpl = Template(
-            conf.MQTT_FSTATE_SOURCE_TEMPLATE
+            settings.MQTT_FSTATE_SOURCE_TEMPLATE
         )
 
     async def handle(self, mqtt_message: Message) -> bool:
@@ -303,7 +303,7 @@ class FStateHandler(MessageHandler):
                 kafka_headers,
             ) = self.get_kafka_message_params(
                 mqtt_topic_params,
-                conf.FSTATE_KAFKA_TOPIC,
+                settings.FSTATE_KAFKA_TOPIC,
             )
             message = orjson.loads(
                 mqtt_message.payload.decode()
@@ -339,9 +339,9 @@ class TopicRouter:
         self.fstate_handler = fstate_handler
 
     async def handle(self, mqtt_message: aiomqtt.Message) -> bool:
-        if mqtt_message.topic.matches(conf.MQTT_TOPIC_SOURCE_MATCH):
+        if mqtt_message.topic.matches(settings.MQTT_TOPIC_SOURCE_MATCH):
             return await self.telemetry_handler.handle(mqtt_message)
-        elif mqtt_message.topic.matches(conf.MQTT_FSTATE_SOURCE_MATCH):
+        elif mqtt_message.topic.matches(settings.MQTT_FSTATE_SOURCE_MATCH):
             return await self.fstate_handler.handle(mqtt_message)
         else:
             logger.warning("Неизвестный топик %s", mqtt_message.topic)

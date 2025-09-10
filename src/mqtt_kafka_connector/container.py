@@ -5,7 +5,7 @@
 
 from dependency_injector import containers, providers
 
-from mqtt_kafka_connector import conf
+from mqtt_kafka_connector.settings import settings
 from mqtt_kafka_connector.clients.kafka import KafkaProducer, MessageHelper
 from mqtt_kafka_connector.clients.mqtt import MQTTClient
 from mqtt_kafka_connector.clients.schema_client import SchemaClient
@@ -22,7 +22,7 @@ class Container(containers.DeclarativeContainer):
     """DI-контейнер приложения."""
 
     config = providers.Configuration()
-    config.from_dict(conf.__dict__)
+    config.from_pydantic(settings)
 
     prometheus = providers.Singleton(
         Prometheus,

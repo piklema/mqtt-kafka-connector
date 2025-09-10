@@ -17,7 +17,7 @@ async def test_http_client(httpx_mock):
     resp_json = await client.request(url=SCHEMA_URL, method="get", params=params)
     assert resp_json == params
 
-    # test 404
+    # проверяем 404
     httpx_mock.return_value = DummyResponse(404, params)
     with pytest.raises(RuntimeError) as excinfo:
         await client.get(url=SCHEMA_URL, params=params)
@@ -25,10 +25,7 @@ async def test_http_client(httpx_mock):
     assert "404" in str(excinfo.value)
 
 
-@patch(
-    "mqtt_kafka_connector.clients.schema_client.SCHEMA_REGISTRY_URL",
-    SCHEMA_URL,
-)
+@patch("mqtt_kafka_connector.clients.schema_client.settings.SCHEMA_REGISTRY_URL", SCHEMA_URL)
 @patch("httpx.AsyncClient.request")
 async def test_schema_client(http_mock):
     data = {"test": "test"}

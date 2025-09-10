@@ -4,7 +4,7 @@ from json import JSONEncoder
 
 
 class DateTimeEncoder(JSONEncoder):
-    # Override the default method
+    # Переопределяем метод по умолчанию
     def default(self, obj):
         if isinstance(obj, (datetime.date, datetime.datetime)):
             return obj.isoformat()

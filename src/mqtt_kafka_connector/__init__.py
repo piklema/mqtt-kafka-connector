@@ -4,7 +4,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from mqtt_kafka_connector.conf import LOGGING
+from mqtt_kafka_connector.settings import LOGGING
 
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent

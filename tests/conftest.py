@@ -79,6 +79,7 @@ def schema():
 
 @pytest.fixture
 async def prometheus():
+    REGISTRY.clear()
     service = Prometheus()
     service.start = AsyncMock()
     service._add = MagicMock()

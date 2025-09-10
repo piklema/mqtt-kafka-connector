@@ -4,7 +4,7 @@ import typing
 
 import aiomqtt
 
-from mqtt_kafka_connector import conf
+from mqtt_kafka_connector.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -17,15 +17,15 @@ class MQTTClient:
     async def start(self):
         self.loop = asyncio.get_running_loop()
         self.client = aiomqtt.Client(
-            hostname=conf.MQTT_HOST,
-            port=conf.MQTT_PORT,
-            username=conf.MQTT_USER,
-            password=conf.MQTT_PASSWORD,
-            identifier=conf.MQTT_CLIENT_ID,
+            hostname=settings.MQTT_HOST,
+            port=settings.MQTT_PORT,
+            username=settings.MQTT_USER,
+            password=settings.MQTT_PASSWORD,
+            identifier=settings.MQTT_CLIENT_ID,
             clean_session=False,
             timeout=300,
         )
-        # setup manual ack
+        # настраиваем ручное подтверждение
         self.loop.run_in_executor(None, self.client._client.manual_ack_set, True)
         logger.info("Клиент MQTT запущен")
 
@@ -34,12 +34,12 @@ class MQTTClient:
             raise RuntimeError("Клиент не инициализирован")
 
         async with self.client as cli:
-            await cli.subscribe(conf.MQTT_TOPIC_SOURCE_MATCH, qos=1)  # customer/#
-            await cli.subscribe(conf.MQTT_FSTATE_SOURCE_MATCH, qos=1)  # fstate/#
+            await cli.subscribe(settings.MQTT_TOPIC_SOURCE_MATCH, qos=1)  # customer/#
+            await cli.subscribe(settings.MQTT_FSTATE_SOURCE_MATCH, qos=1)  # fstate/#
 
             async for mqtt_message in cli.messages:
                 yield mqtt_message
-                # send ack
+                # отправляем подтверждение
                 self.loop.run_in_executor(
                     None,
                     cli._client.ack,

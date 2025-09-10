@@ -1,25 +1,23 @@
-from unittest import mock
+from unittest.mock import patch
 
 from mqtt_kafka_connector.connector.main import main
 
 
-@mock.patch("mqtt_kafka_connector.connector.main.Container")
-@mock.patch("asyncio.run")
-def test_main_uses_container(mock_asyncio_run, mock_container):
+@patch("mqtt_kafka_connector.connector.main.Container")
+@patch("asyncio.run")
+def test_main(mock_asyncio_run, mock_container):
     """
-    Тест проверяет, что функция main использует DI-контейнер для создания
-    и запуска коннектора.
+    Тест проверяет, что:
+    - Создается DI-контейнер.
+    - Из контейнера получается коннектор.
+    - Запускается `asyncio.run` с методом `run` коннектора.
     """
-    # Arrange (Подготовка)
-    # Моки asyncio.run и Container уже переданы в аргументах
-
-    # Act (Действие)
+    # Действие
     main()
 
-    # Assert (Проверка)
-    # Проверяем, что контейнер был создан
+    # Проверки
     mock_container.assert_called_once()
-    # Проверяем, что из контейнера был получен коннектор
-    mock_container().connector.assert_called_once()
-    # Проверяем, что был запущен метод run() коннектора
-    mock_asyncio_run.assert_called_once_with(mock_container().connector().run())
+    mock_container.return_value.connector.assert_called_once()
+    mock_asyncio_run.assert_called_once_with(
+        mock_container.return_value.connector.return_value.run.return_value
+    )

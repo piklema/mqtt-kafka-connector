@@ -5,7 +5,7 @@ import logging
 import orjson
 from aiokafka import AIOKafkaProducer
 
-from mqtt_kafka_connector import conf
+from mqtt_kafka_connector.settings import settings
 from mqtt_kafka_connector.utils import DateTimeEncoder, clean_none_fields
 
 logger = logging.getLogger(__name__)
@@ -25,8 +25,8 @@ class MessageHelper:
 
         msg_time = msg_time.astimezone(dt.timezone.utc)
         now_utc = dt.datetime.now(dt.timezone.utc)
-        early = now_utc - dt.timedelta(hours=conf.MIN_TELEMETRY_INTERVAL_AGE_HOURS)
-        late = now_utc + dt.timedelta(hours=conf.MAX_TELEMETRY_INTERVAL_AGE_HOURS)
+        early = now_utc - dt.timedelta(hours=settings.MIN_TELEMETRY_INTERVAL_AGE_HOURS)
+        late = now_utc + dt.timedelta(hours=settings.MAX_TELEMETRY_INTERVAL_AGE_HOURS)
         self.prometheus.telemetry_message_lag_add(
             value=(now_utc - msg_time).total_seconds(),
         )
@@ -38,14 +38,14 @@ class MessageHelper:
 
     def prepare_msg_for_kafka(self, raw_msg: dict) -> bytes | None:
         try:
-            if conf.MODIFY_MESSAGE_RM_NONE_FIELDS:
+            if settings.MODIFY_MESSAGE_RM_NONE_FIELDS:
                 raw_msg = clean_none_fields(raw_msg)
 
-            # Implicit casting to JSON standard without
-            # NaN, Inf, -Inf values with orjson)
+            # Неявное приведение к стандарту JSON без
+            # значений NaN, Inf, -Inf с помощью orjson)
             msg_for_kafka = (
                 orjson.dumps(raw_msg)
-                if conf.MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS
+                if settings.MODIFY_MESSAGE_RM_NON_NUMBER_FLOAT_FIELDS
                 else json.dumps(raw_msg, cls=DateTimeEncoder).encode()
             )
 
@@ -66,7 +66,7 @@ class KafkaProducer:
 
     async def start(self):
         self.producer: AIOKafkaProducer = AIOKafkaProducer(
-            bootstrap_servers=conf.KAFKA_BOOTSTRAP_SERVERS,
+            bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
         )
         await self.producer.start()
         logger.info("Продюсер Kafka запущен")

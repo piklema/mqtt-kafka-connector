@@ -4,7 +4,7 @@ import logging
 from aioprometheus import Counter, Summary
 from aioprometheus.service import Service
 
-from mqtt_kafka_connector.conf import PROMETHEUS_PORT
+from mqtt_kafka_connector.settings import settings
 from mqtt_kafka_connector.context_vars import customer_id_var, device_id_var
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class Prometheus:
 
     async def start(self):
         self.service = Service()
-        await self.service.start(addr="0.0.0.0", port=PROMETHEUS_PORT)
+        await self.service.start(addr="0.0.0.0", port=settings.PROMETHEUS_PORT)
         logger.info("Сервис Prometheus запущен")
 
     def _add(self, metric, value: float):
