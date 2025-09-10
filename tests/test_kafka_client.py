@@ -1,6 +1,7 @@
 import datetime as dt
 
 import pytest
+
 from mqtt_kafka_connector import conf
 
 

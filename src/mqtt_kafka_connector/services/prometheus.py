@@ -3,6 +3,7 @@ import logging
 
 from aioprometheus import Counter, Summary
 from aioprometheus.service import Service
+
 from mqtt_kafka_connector.conf import PROMETHEUS_PORT
 from mqtt_kafka_connector.context_vars import customer_id_var, device_id_var
 

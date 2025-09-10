@@ -7,6 +7,7 @@ import pytest
 from aiomqtt.message import Message
 from aioprometheus import REGISTRY
 from dataclasses_avroschema import AvroModel
+
 from mqtt_kafka_connector.clients.kafka import KafkaProducer, MessageHelper
 from mqtt_kafka_connector.services.prometheus import Prometheus
 

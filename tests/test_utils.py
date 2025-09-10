@@ -1,4 +1,5 @@
 from deepdiff import DeepDiff
+
 from mqtt_kafka_connector.utils import Template, clean_none_fields
 
 
