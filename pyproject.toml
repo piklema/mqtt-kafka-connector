@@ -3,7 +3,7 @@ name = "mqtt-kafka-connector"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = "~=3.12"
+requires-python = ">=3.12, <4"
 dependencies = [
     "aiocache>=0.12.3",
     "aiohttp>=3.11.16",

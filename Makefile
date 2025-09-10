@@ -16,17 +16,17 @@ import re
 import sys
 
 for line in sys.stdin:
-	match = re.match(r'^([a-zA-Z_-]+):.*?## (.*)$$', line)
+	match = re.match(r'^([a-zA-Z_-]+):.*?## (.*)$', line)
 	if match:
 		target, help = match.groups()
-		print("%-20s %s" % (target, help))
+		print("%-" + "20s %s" % (target, help))
 endef
 export PRINT_HELP_PYSCRIPT
 
 BROWSER := python -c "$$BROWSER_PYSCRIPT"
 
 help:
-	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
+	@python -c "$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
@@ -50,38 +50,40 @@ clean-test: ## remove test and coverage artifacts
 
 
 lint: ## check style
-	ruff check
+	uv run ruff check
 
 format: ## format style
-	ruff check --select I --fix .
-	ruff check --fix .
-	ruff format .
+	uv run ruff check --select I --fix .
+	uv run ruff check --fix .
+	uv run ruff format .
+
 
 test: ## run tests quickly with the default Python
 	set -a && source .env.example && set +a; \
-	pytest --cov --cov-report=term-missing -ra -q -s
+	uv run pytest --cov --cov-report=term-missing -ra -q -s
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source src -m pytest
-	coverage report -m
-	coverage html
+	uv run coverage run --source src -m pytest
+	uv run coverage report -m
+	uv run coverage html
 	$(BROWSER) htmlcov/index.html
 
 release: dist ## package and upload a release
-	twine upload dist/*
+	uv run twine upload dist/*
 
 dist: clean ## builds source and wheel package
-	python setup.py sdist
-	python setup.py bdist_wheel
+	uv run python setup.py sdist
+	uv run python setup.py bdist_wheel
 	ls -l dist
 uninstall:
 	pip uninstall mqtt-kafka-connector -yy
 
 install: uninstall clean ## install the package to the active Python's site-packages
-	python setup.py install
+	uv run python setup.py install
 
 run: ## run local
-	@python src/mqtt_kafka_connector/connector/main.py
+	@uv run python src/mqtt_kafka_connector/connector/main.py
+
 
 requirements_uninstall: ##
 	@pip freeze | grep -v "pkg-resources" | grep -v "@" | xargs -r pip uninstall -y --quiet
