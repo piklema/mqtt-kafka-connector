@@ -13,7 +13,7 @@ from mqtt_kafka_connector.connector.handlers import (
 )
 from mqtt_kafka_connector.context_vars import customer_id_var, device_id_var
 from mqtt_kafka_connector.middlewares import Pipeline
-from tests.conftest import DEVICE_ID, SCHEMA_ID, CUSTOMER_ID, MQTT_TOPIC, MQTT_FSTATE_TOPIC, _get_message
+from tests.conftest import DEVICE_ID, SCHEMA_ID, CUSTOMER_ID, MQTT_TOPIC, MQTT_FSTATE_TOPIC, create_mqtt_message
 
 TZ = ZoneInfo("UTC")
 
@@ -50,7 +50,7 @@ def topic_router(telemetry_handler_mock, fstate_handler_mock):
 async def test_topic_router_telemetry(
     topic_router, telemetry_handler_mock, fstate_handler_mock
 ):
-    message = _get_message(f"customer/{CUSTOMER_ID}/dev/{DEVICE_ID}/v{SCHEMA_ID}")
+    message = create_mqtt_message(f"customer/{CUSTOMER_ID}/dev/{DEVICE_ID}/v{SCHEMA_ID}")
     await topic_router.handle(message)
 
     telemetry_handler_mock.handle.assert_called_once_with(message)
@@ -60,7 +60,7 @@ async def test_topic_router_telemetry(
 async def test_topic_router_fstate(
     topic_router, telemetry_handler_mock, fstate_handler_mock
 ):
-    message = _get_message(f"fstate/{CUSTOMER_ID}/truck/{DEVICE_ID}")
+    message = create_mqtt_message(f"fstate/{CUSTOMER_ID}/truck/{DEVICE_ID}")
     await topic_router.handle(message)
 
     fstate_handler_mock.handle.assert_called_once_with(message)
@@ -70,7 +70,7 @@ async def test_topic_router_fstate(
 async def test_topic_router_unknown(
     topic_router, telemetry_handler_mock, fstate_handler_mock, caplog
 ):
-    message = _get_message("unknown/topic")
+    message = create_mqtt_message("unknown/topic")
     await topic_router.handle(message)
 
     fstate_handler_mock.handle.assert_not_called()
@@ -80,7 +80,7 @@ async def test_topic_router_unknown(
 
 async def test_telemetry_handler(telemetry_handler, pipeline, message_pack):
     payload_bytes = message_pack.serialize()
-    message = _get_message(
+    message = create_mqtt_message(
         topic=MQTT_TOPIC,
         payload=payload_bytes,
     )
@@ -104,7 +104,7 @@ async def test_telemetry_handler(telemetry_handler, pipeline, message_pack):
 async def test_fstate_handler(fstate_handler):
     now = dt.datetime.now().isoformat()
     payload = f'{{"time": "{now}"}}'.encode()
-    message = _get_message(
+    message = create_mqtt_message(
         topic=MQTT_FSTATE_TOPIC,
         payload=payload,
     )
@@ -121,7 +121,7 @@ async def test_fstate_handler(fstate_handler):
 
 async def test_fstate_handler_not_valid_json(fstate_handler, caplog):
     payload = b"not valid json"
-    message = _get_message(
+    message = create_mqtt_message(
         topic=MQTT_FSTATE_TOPIC,
         payload=payload,
     )
@@ -132,7 +132,7 @@ async def test_fstate_handler_not_valid_json(fstate_handler, caplog):
 
 async def test_fstate_handler_with_bad_topic(fstate_handler, caplog):
     payload = b"{}"
-    message = _get_message(
+    message = create_mqtt_message(
         topic=f"fstate/{CUSTOMER_ID}/truck/",
         payload=payload,
     )

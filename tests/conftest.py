@@ -21,7 +21,7 @@ CUSTOMER_ID = "11111"
 MQTT_TOPIC = f"customer/{CUSTOMER_ID}/dev/{DEVICE_ID}/v{SCHEMA_ID}"
 MQTT_FSTATE_TOPIC = f"fstate/{CUSTOMER_ID}/truck/{DEVICE_ID}"
 
-def _get_message(topic: str, payload: bytes = b"test_payload") -> Message:
+def create_mqtt_message(topic: str, payload: bytes = b"test_payload") -> Message:
     return Message(
         topic=topic,
         payload=payload,
