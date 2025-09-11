@@ -22,6 +22,9 @@ class MessageHelper:
 
         if isinstance(msg_time, str):
             msg_time = dt.datetime.fromisoformat(msg_time)
+        elif isinstance(msg_time, int):
+            # Avro timestamp-millis is milliseconds since epoch
+            msg_time = dt.datetime.fromtimestamp(msg_time / 1000, tz=dt.timezone.utc)
 
         msg_time = msg_time.astimezone(dt.timezone.utc)
         now_utc = dt.datetime.now(dt.timezone.utc)

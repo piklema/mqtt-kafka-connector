@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import io
 import logging
 from collections import defaultdict
 
-import aiomqtt
-import fastavro
 import orjson
 from aiomqtt.message import Message
 
+from mqtt_kafka_connector.middlewares import Pipeline
 from mqtt_kafka_connector.settings import settings
 from mqtt_kafka_connector.context_vars import message_uuid_var, setup_context_vars
 from mqtt_kafka_connector.utils import Template
@@ -78,11 +76,11 @@ class TelemetryHandler(MessageHandler):
     def __init__(
         self,
         kafka_producer: "KafkaProducer",
-        schema_client: "SchemaClient",
+        pipeline: "Pipeline",
         prometheus: "Prometheus" | None = None,
     ):
         super().__init__(kafka_producer)
-        self.schema_client = schema_client
+        self.pipeline = pipeline
         self.prometheus = prometheus
         self.last_messages = defaultdict(dict)
 
@@ -96,6 +94,10 @@ class TelemetryHandler(MessageHandler):
         Returns:
             True, если сообщение было успешно обработано, иначе False.
         """
+        logger.debug(
+            "Получено сообщение из mqtt_topic.value=%s",
+            mqtt_message.topic.value,
+        )
         if not (mqtt_params := self._setup_vars(
             mqtt_message, settings.MQTT_TOPIC_SOURCE_TEMPLATE
         )):
@@ -116,10 +118,27 @@ class TelemetryHandler(MessageHandler):
             )
             return False
 
-        schema_id = int(dict(kafka_headers)["schema_id"])
-        telemetry_msg_pack = await self.get_telemetry_message_pack(
-            mqtt_message, schema_id
+        schema_id = int(dict(kafka_headers).get("schema_id", 0))
+
+        processed_data = await self.pipeline.run(
+            mqtt_message.payload, schema_id=schema_id
         )
+
+        if not isinstance(processed_data, dict):
+            logger.warning(
+                "Не удалось распознать формат сообщения телеметрии: %s",
+                processed_data,
+            )
+            return False
+
+        telemetry_msg_pack = processed_data.get("messages")
+        if not telemetry_msg_pack or not isinstance(telemetry_msg_pack, list):
+            logger.warning(
+                "В сообщении телеметрии отсутствует список 'messages': %s",
+                processed_data,
+            )
+            return False
+
         if self.check_telemetry_messages_pack(
             mqtt_message.topic.value, telemetry_msg_pack
         ):
@@ -132,37 +151,6 @@ class TelemetryHandler(MessageHandler):
             self.prometheus.messages_counter_add(value=len(telemetry_msg_pack))
 
         return True
-
-    async def deserialize(self, msg: aiomqtt.Message, schema_id: int) -> dict:
-        """
-        Десериализация сообщения из Avro формата.
-
-        Args:
-            msg: Сообщение из MQTT.
-            schema_id: ID схемы для десериализации.
-
-        Returns:
-            Десериализованное сообщение в виде словаря.
-        """
-        schema = await self.schema_client.get_schema(schema_id)
-
-        if not schema:
-            raise RuntimeError("Схема не найдена")
-
-        fp = io.BytesIO(msg.payload)
-        try:
-            parsed_schema = fastavro.parse_schema(schema)
-            data = fastavro.schemaless_reader(fp, parsed_schema)
-        except (IndexError, StopIteration, EOFError) as e:
-            error_message = (
-                f"Сообщение не валидно: ошибка десериализации Avro: {e}"
-            )
-            logger.error(error_message, exc_info=True)
-            raise RuntimeError(error_message) from e
-
-        logger.debug("Сообщение десериализовано: data=%s", data)
-
-        return data
 
     def check_telemetry_messages_pack(
         self, mqtt_topic: str, telemetry_msg_pack: list
@@ -191,45 +179,6 @@ class TelemetryHandler(MessageHandler):
 
         logger.info("Получено %s сообщений из %s", messages_count, mqtt_topic)
         return True
-
-    async def get_telemetry_message_pack(
-        self,
-        mqtt_message: aiomqtt.Message,
-        schema_id: int,
-    ) -> list[dict] | None:
-        """
-        Получение и десериализация пакета телеметрических сообщений.
-
-        Args:
-            mqtt_message: Сообщение из MQTT.
-            schema_id: ID схемы для десериализации.
-
-        Returns:
-            Список телеметрических сообщений или None, если пакет пустой.
-        """
-        mqtt_topic = mqtt_message.topic
-
-        logger.debug(
-            "Получено сообщение из "
-            "mqtt_topic.value=%s message.payload=%s message.qos=%s",
-            mqtt_topic.value,
-            mqtt_message.payload,
-            mqtt_message.qos,
-        )
-
-        if settings.WITH_MESSAGE_DESERIALIZE:
-            mqtt_msg_dict = await self.deserialize(mqtt_message, schema_id)
-            telemetry_msg_pack = mqtt_msg_dict["messages"]
-
-        else:
-            data = mqtt_message.payload
-            telemetry_msg_pack = orjson.loads(data.decode())["messages"]
-
-        if not telemetry_msg_pack:
-            logger.warning("Пустой пакет сообщений")
-            return
-
-        return telemetry_msg_pack
 
     async def kafka_handler(
         self,

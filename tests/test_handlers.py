@@ -1,5 +1,4 @@
 import datetime as dt
-import json
 from unittest import mock
 
 import orjson
@@ -13,6 +12,7 @@ from mqtt_kafka_connector.connector.handlers import (
     TopicRouter,
 )
 from mqtt_kafka_connector.context_vars import customer_id_var, device_id_var
+from mqtt_kafka_connector.middlewares import Pipeline
 
 TZ = ZoneInfo("UTC")
 DEVICE_ID = "22222"
@@ -38,15 +38,8 @@ def kafka_producer():
 
 
 @pytest.fixture
-def schema_client(schema):
-    client = mock.AsyncMock()
-    client.get_schema.return_value = schema
-    return client
-
-
-@pytest.fixture
-def prometheus():
-    return mock.AsyncMock()
+def pipeline():
+    return mock.AsyncMock(spec=Pipeline)
 
 
 @pytest.fixture
@@ -55,8 +48,8 @@ def fstate_handler(kafka_producer):
 
 
 @pytest.fixture
-def telemetry_handler(kafka_producer, schema_client, prometheus):
-    return TelemetryHandler(kafka_producer, schema_client, prometheus)
+def telemetry_handler(kafka_producer, pipeline, prometheus):
+    return TelemetryHandler(kafka_producer, pipeline, prometheus)
 
 
 @pytest.fixture
@@ -109,32 +102,27 @@ async def test_topic_router_unknown(
     assert "Неизвестный топик" in caplog.text
 
 
-async def test_telemetry_handler(telemetry_handler, message_pack):
+async def test_telemetry_handler(telemetry_handler, pipeline, message_pack):
+    payload_bytes = message_pack.serialize()
     message = _get_message(
         topic=MQTT_TOPIC,
-        payload=message_pack.serialize(),
+        payload=payload_bytes,
     )
+
+    deserialized_data = message_pack.to_dict()
+    pipeline.run.return_value = deserialized_data
+
     res = await telemetry_handler.handle(message)
+
     assert res is True
     assert customer_id_var.get() == CUSTOMER_ID
     assert device_id_var.get() == DEVICE_ID
 
-    send_batch_args = (
-        telemetry_handler.kafka_producer.send_batch.call_args.args
-    )
-    assert send_batch_args[2] == DEVICE_ID.encode()
+    pipeline.run.assert_called_once_with(payload_bytes, schema_id=int(SCHEMA_ID))
 
-    sent_message = send_batch_args[1][0]
-    unpacked_message = message_pack.messages[0]
-
-    assert int(sent_message["time"].timestamp() * 1000) == unpacked_message["time"]
-
-    headers = dict(send_batch_args[3])
-    assert headers.pop("message_uuid")
-    assert headers == dict(
-        schema_id=SCHEMA_ID.encode(),
-        message_deserialized=b"1",
-    )
+    telemetry_handler.kafka_producer.send_batch.assert_called_once()
+    call_args, _ = telemetry_handler.kafka_producer.send_batch.call_args
+    assert call_args[1] == deserialized_data["messages"]
 
 
 async def test_fstate_handler(fstate_handler):

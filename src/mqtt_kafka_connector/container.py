@@ -16,6 +16,12 @@ from mqtt_kafka_connector.connector.handlers import (
     TelemetryHandler,
     TopicRouter,
 )
+from mqtt_kafka_connector.middlewares import (
+    AvroMiddleware,
+    GzipMiddleware,
+    JsonMiddleware,
+    Pipeline,
+)
 from mqtt_kafka_connector.services.prometheus import Prometheus
 
 
@@ -80,6 +86,23 @@ class Container(containers.DeclarativeContainer):
         false=providers.Singleton(SchemaClient),
     )
 
+    # Middlewares
+    gzip_middleware = providers.Singleton(GzipMiddleware)
+    avro_middleware = providers.Singleton(
+        AvroMiddleware,
+        schema_client=schema_client,
+    )
+    json_middleware = providers.Singleton(JsonMiddleware)
+
+    telemetry_pipeline = providers.Singleton(
+        Pipeline,
+        middlewares=providers.List(
+            gzip_middleware,
+            avro_middleware,
+            json_middleware,
+        ),
+    )
+
     fstate_handler = providers.Singleton(
         FStateHandler,
         kafka_producer=kafka_producer,
@@ -88,7 +111,7 @@ class Container(containers.DeclarativeContainer):
     telemetry_handler = providers.Singleton(
         TelemetryHandler,
         kafka_producer=kafka_producer,
-        schema_client=schema_client,
+        pipeline=telemetry_pipeline,
         prometheus=prometheus,
     )
 

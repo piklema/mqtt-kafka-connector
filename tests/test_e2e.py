@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import gzip
 import io
 
 import fastavro
@@ -15,86 +16,171 @@ SCHEMA_ID = "333333"
 CUSTOMER_ID = "11111"
 
 
-@pytest.mark.e2e
-@pytest.mark.asyncio
-async def test_e2e():
-    # 1. Запускаем брокеры Kafka и MQTT
-    # Запустить сервисы нужно вручную командой:
-    # `docker compose -f docker-compose.e2e.yml up -d`
+@pytest.fixture
+def schema():
+    return {
+        "name": "MessagePack",
+        "type": "record",
+        "fields": [
+            {
+                "name": "messages",
+                "type": {
+                    "type": "array",
+                    "items": {
+                        "name": "MessageModel",
+                        "type": "record",
+                        "fields": [
+                            {
+                                "name": "time",
+                                "type": {
+                                    "type": "long",
+                                    "logicalType": "timestamp-millis",
+                                },
+                            },
+                            {"name": "speed", "type": "double"},
+                            {"name": "lat", "type": "double"},
+                            {"name": "lon", "type": "double"},
+                        ],
+                    },
+                },
+            }
+        ],
+    }
 
-    # 2. Отправляем сообщение в MQTT
+
+@pytest.fixture
+async def mqtt_client():
     async with MqttClient(
         hostname=settings.MQTT_HOST,
         port=settings.MQTT_PORT,
         username=settings.MQTT_USER,
         password=settings.MQTT_PASSWORD,
-    ) as mqtt_client:
-        schema = {
-            "name": "MessagePack",
-            "type": "record",
-            "fields": [
-                {
-                    "name": "messages",
-                    "type": {
-                        "type": "array",
-                        "items": {
-                            "name": "MessageModel",
-                            "type": "record",
-                            "fields": [
-                                {
-                                    "name": "time",
-                                    "type": {
-                                        "type": "long",
-                                        "logicalType": "timestamp-millis",
-                                    },
-                                },
-                                {"name": "speed", "type": "double"},
-                                {"name": "lat", "type": "double"},
-                                {"name": "lon", "type": "double"},
-                            ],
-                        },
-                    },
-                }
-            ],
-        }
-        parsed_schema = fastavro.parse_schema(schema)
+    ) as client:
+        yield client
 
-        now_millis = int(
-            datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000
+
+@pytest.fixture
+async def kafka_consumer_factory():
+    consumers = []
+
+    async def _factory(group_id: str) -> AIOKafkaConsumer:
+        consumer = AIOKafkaConsumer(
+            settings.TELEMETRY_KAFKA_TOPIC,
+            bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
+            group_id=group_id,
+            auto_offset_reset="earliest",
         )
-        payload_dict = {
-            "messages": [
-                {
-                    "time": now_millis,
-                    "speed": 10,
-                    "lat": 55.75,
-                    "lon": 37.61,
-                },
-            ]
-        }
-        fp = io.BytesIO()
-        fastavro.schemaless_writer(fp, parsed_schema, payload_dict)
-        fp.seek(0)
-        payload = fp.read()
+        await consumer.start()
+        consumers.append(consumer)
+        return consumer
 
-        await mqtt_client.publish(
-            f"customer/{CUSTOMER_ID}/dev/{DEVICE_ID}/v{SCHEMA_ID}",
-            payload=payload,
-        )
+    yield _factory
 
-    # 3. Потребляем сообщение из Kafka
-    consumer = AIOKafkaConsumer(
-        settings.TELEMETRY_KAFKA_TOPIC,
-        bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
-        group_id="test-group",
-        auto_offset_reset="earliest",
-    )
-    await consumer.start()
-    try:
+    for consumer in consumers:
+        await consumer.stop()
+
+
+async def _consume_and_check(consumer: AIOKafkaConsumer, expected_speed: float):
+    while True:
         msg = await asyncio.wait_for(consumer.getone(), timeout=5)
         assert msg is not None
         data = orjson.loads(msg.value)
-        assert data["speed"] == 10
-        assert data["lat"] == 55.75
-    finally:
-        await consumer.stop()
+        if data.get("speed") == expected_speed:
+            return data
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_e2e_avro(schema, mqtt_client, kafka_consumer_factory):
+    """Тест сквозной отправки бинарного сообщения Avro."""
+    consumer = await kafka_consumer_factory("test-group-avro")
+    expected_speed = 10.0
+
+    parsed_schema = fastavro.parse_schema(schema)
+    now_millis = int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
+    payload_dict = {
+        "messages": [
+            {
+                "time": now_millis,
+                "speed": expected_speed,
+                "lat": 55.75,
+                "lon": 37.61,
+            },
+        ]
+    }
+    fp = io.BytesIO()
+    fastavro.schemaless_writer(fp, parsed_schema, payload_dict)
+    fp.seek(0)
+    payload = fp.read()
+
+    await mqtt_client.publish(
+        f"customer/{CUSTOMER_ID}/dev/{DEVICE_ID}/v{SCHEMA_ID}",
+        payload=payload,
+    )
+
+    data = await _consume_and_check(consumer, expected_speed)
+    assert data["speed"] == expected_speed
+    assert data["lat"] == 55.75
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_e2e_json(mqtt_client, kafka_consumer_factory):
+    """Тест сквозной отправки сообщения в формате JSON."""
+    consumer = await kafka_consumer_factory("test-group-json")
+    expected_speed = 20.0
+
+    now_millis = int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
+    payload_dict = {
+        "messages": [
+            {
+                "time": now_millis,
+                "speed": expected_speed,
+                "lat": 55.75,
+                "lon": 37.61,
+            },
+        ]
+    }
+    payload = orjson.dumps(payload_dict)
+
+    await mqtt_client.publish(
+        f"customer/{CUSTOMER_ID}/dev/{DEVICE_ID}/v{SCHEMA_ID}",
+        payload=payload,
+    )
+
+    data = await _consume_and_check(consumer, expected_speed)
+    assert data["speed"] == expected_speed
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_e2e_gzipped_avro(schema, mqtt_client, kafka_consumer_factory):
+    """Тест сквозной отправки Gzipped Avro сообщения."""
+    consumer = await kafka_consumer_factory("test-group-gzip")
+    expected_speed = 30.0
+
+    parsed_schema = fastavro.parse_schema(schema)
+    now_millis = int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
+    payload_dict = {
+        "messages": [
+            {
+                "time": now_millis,
+                "speed": expected_speed,
+                "lat": 55.75,
+                "lon": 37.61,
+            },
+        ]
+    }
+    fp = io.BytesIO()
+    fastavro.schemaless_writer(fp, parsed_schema, payload_dict)
+    fp.seek(0)
+    avro_payload = fp.read()
+    gzipped_payload = gzip.compress(avro_payload)
+
+    await mqtt_client.publish(
+        f"customer/{CUSTOMER_ID}/dev/{DEVICE_ID}/v{SCHEMA_ID}",
+        payload=gzipped_payload,
+    )
+
+    data = await _consume_and_check(consumer, expected_speed)
+    assert data["speed"] == expected_speed

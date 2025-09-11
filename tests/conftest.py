@@ -88,6 +88,7 @@ async def prometheus():
     service = Prometheus()
     service.start = AsyncMock()
     service._add = MagicMock()
+    service.messages_counter_add = MagicMock()
     yield service
     REGISTRY.clear()
 
@@ -140,3 +141,18 @@ async def mqtt_client(monkeypatch, message_pack):
     mqtt_client = MagicMock(return_value=mock_client)
     monkeypatch.setattr("aiomqtt.Client", mqtt_client)
     return mqtt_client
+
+
+@pytest.fixture
+def mock_mqtt_settings(monkeypatch):
+    mock_settings = MagicMock()
+    mock_settings.MQTT_HOST = "mock_host"
+    mock_settings.MQTT_PORT = 1883
+    mock_settings.MQTT_USER = "mock_user"
+    mock_settings.MQTT_PASSWORD = "mock_password"
+    mock_settings.MQTT_CLIENT_ID = "mock_client_id"
+    mock_settings.MQTT_TOPIC_SOURCE_MATCH = "mock_topic_match"
+    mock_settings.MQTT_FSTATE_SOURCE_MATCH = "mock_fstate_match"
+
+    monkeypatch.setattr("mqtt_kafka_connector.clients.mqtt.settings", mock_settings)
+    return mock_settings
