@@ -1,19 +1,18 @@
 import asyncio
 import dataclasses
 import datetime
-import orjson
 from unittest.mock import AsyncMock, MagicMock
 
+import orjson
 import pytest
 from aiomqtt.message import Message
 from aioprometheus import REGISTRY
 from dataclasses_avroschema import AvroModel
 
 from mqtt_kafka_connector.clients.kafka import KafkaProducer, MessageHelper
-from mqtt_kafka_connector.services.prometheus import Prometheus
 from mqtt_kafka_connector.clients.schema_client import SchemaClient
 from mqtt_kafka_connector.middlewares import Pipeline
-
+from mqtt_kafka_connector.services.prometheus import Prometheus
 
 DEVICE_ID = "22222"
 SCHEMA_ID = "333333"

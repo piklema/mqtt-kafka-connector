@@ -5,7 +5,6 @@ import fastavro
 import orjson
 import pytest
 
-from mqtt_kafka_connector.clients.schema_client import SchemaClient
 from mqtt_kafka_connector.middlewares import (
     AvroMiddleware,
     GzipMiddleware,

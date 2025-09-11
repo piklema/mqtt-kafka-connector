@@ -10,7 +10,7 @@ from aiokafka import AIOKafkaConsumer
 from aiomqtt import Client as MqttClient
 
 from mqtt_kafka_connector.settings import settings
-from tests.conftest import DEVICE_ID, SCHEMA_ID, CUSTOMER_ID
+from tests.conftest import CUSTOMER_ID, DEVICE_ID, SCHEMA_ID
 
 
 @pytest.fixture

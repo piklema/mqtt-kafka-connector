@@ -6,10 +6,12 @@ from collections import defaultdict
 import orjson
 from aiomqtt.message import Message
 
+from mqtt_kafka_connector.context_vars import message_uuid_var, setup_context_vars
 from mqtt_kafka_connector.middlewares import Pipeline
 from mqtt_kafka_connector.settings import settings
-from mqtt_kafka_connector.context_vars import message_uuid_var, setup_context_vars
 from mqtt_kafka_connector.utils import Template
+from mqtt_kafka_connector.clients.kafka import KafkaProducer
+from mqtt_kafka_connector.services.prometheus import Prometheus
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,7 @@ class BaseHandler:
 
 
 class MessageHandler(BaseHandler):
-    def __init__(self, kafka_producer: "KafkaProducer"):
+    def __init__(self, kafka_producer: KafkaProducer):
         self.kafka_producer = kafka_producer
 
     def _setup_vars(self, message: Message, template: str) -> dict | None:
@@ -31,7 +33,9 @@ class MessageHandler(BaseHandler):
         device_id = mqtt_params.get("device_id")
         if not device_id:
             logger.error(
-                "В параметрах топика %r не найден ID устройства", mqtt_params
+                "В топике MQTT %r не найден ID устройства. Параметры: %r",
+                message.topic.value,
+                mqtt_params,
             )
             return None
 
@@ -75,9 +79,9 @@ class MessageHandler(BaseHandler):
 class TelemetryHandler(MessageHandler):
     def __init__(
         self,
-        kafka_producer: "KafkaProducer",
+        kafka_producer: KafkaProducer,
         pipeline: "Pipeline",
-        prometheus: "Prometheus" | None = None,
+        prometheus: Prometheus | None = None,
     ):
         super().__init__(kafka_producer)
         self.pipeline = pipeline
@@ -98,9 +102,11 @@ class TelemetryHandler(MessageHandler):
             "Получено сообщение из mqtt_topic.value=%s",
             mqtt_message.topic.value,
         )
-        if not (mqtt_params := self._setup_vars(
-            mqtt_message, settings.MQTT_TOPIC_SOURCE_TEMPLATE
-        )):
+        if not (
+            mqtt_params := self._setup_vars(
+                mqtt_message, settings.MQTT_TOPIC_SOURCE_TEMPLATE
+            )
+        ):
             return False
 
         try:
@@ -113,9 +119,7 @@ class TelemetryHandler(MessageHandler):
                 settings.TELEMETRY_KAFKA_TOPIC,
             )
         except KeyError as err:
-            logger.error(
-                "Ключ не найден в параметрах топика %r: %s", mqtt_params, err
-            )
+            logger.error("Ключ не найден в параметрах топика %r: %s", mqtt_params, err)
             return False
 
         schema_id = int(dict(kafka_headers).get("schema_id", 0))
@@ -126,15 +130,18 @@ class TelemetryHandler(MessageHandler):
 
         if not isinstance(processed_data, dict):
             logger.warning(
-                "Не удалось распознать формат сообщения телеметрии: %s",
+                "Не удалось распознать формат сообщения телеметрии из топика %r: %s. Payload: %r",
+                mqtt_message.topic.value,
                 processed_data,
+                mqtt_message.payload[:200],
             )
             return False
 
         telemetry_msg_pack = processed_data.get("messages")
         if not telemetry_msg_pack or not isinstance(telemetry_msg_pack, list):
             logger.warning(
-                "В сообщении телеметрии отсутствует список 'messages': %s",
+                "В сообщении телеметрии из топика %r отсутствует список 'messages': %s",
+                mqtt_message.topic.value,
                 processed_data,
             )
             return False
@@ -231,7 +238,7 @@ class FStateHandler(MessageHandler):
         Returns:
             True, если сообщение было успешно обработано, иначе False.
         """
-        logger.info(
+        logger.debug(
             "Обработчик сообщений о состоянии mqtt_message topic=%r, payload=%r, qos=%r, retain=%r, mid=%r, properties=%r",
             mqtt_message.topic,
             mqtt_message.payload,
@@ -241,9 +248,11 @@ class FStateHandler(MessageHandler):
             mqtt_message.properties,
         )
 
-        if not (mqtt_params := self._setup_vars(
-            mqtt_message, settings.MQTT_FSTATE_SOURCE_TEMPLATE
-        )):
+        if not (
+            mqtt_params := self._setup_vars(
+                mqtt_message, settings.MQTT_FSTATE_SOURCE_TEMPLATE
+            )
+        ):
             return False
 
         try:
@@ -261,11 +270,19 @@ class FStateHandler(MessageHandler):
                 else str(mqtt_message.payload)
             )
         except orjson.JSONDecodeError as err:
-            logger.error("Ошибка декодирования JSON: %s", err)
+            logger.error(
+                "Ошибка декодирования JSON из топика %r. Payload: %r. Ошибка: %s",
+                mqtt_message.topic.value,
+                mqtt_message.payload[:200],
+                err,
+            )
             return False
         except KeyError as err:
             logger.error(
-                "Ключ не найден в параметрах топика %r: %s", mqtt_params, err
+                "Ключ не найден в параметрах топика MQTT %r. Параметры: %r. Ошибка: %s",
+                mqtt_message.topic.value,
+                mqtt_params,
+                err,
             )
             return False
 
@@ -288,7 +305,7 @@ class TopicRouter:
         self.telemetry_handler = telemetry_handler
         self.fstate_handler = fstate_handler
 
-    async def handle(self, mqtt_message: aiomqtt.Message) -> bool:
+    async def handle(self, mqtt_message: Message) -> bool:
         if mqtt_message.topic.matches(settings.MQTT_TOPIC_SOURCE_MATCH):
             return await self.telemetry_handler.handle(mqtt_message)
         elif mqtt_message.topic.matches(settings.MQTT_FSTATE_SOURCE_MATCH):

@@ -1,6 +1,5 @@
+
 from mqtt_kafka_connector.clients.mqtt import MQTTClient
-from mqtt_kafka_connector.settings import settings
-from unittest import mock
 
 
 async def test_client(mqtt_client, mock_mqtt_settings):

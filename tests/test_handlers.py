@@ -1,10 +1,9 @@
 import datetime as dt
 from unittest import mock
+from zoneinfo import ZoneInfo
 
 import orjson
 import pytest
-from aiomqtt.message import Message
-from zoneinfo import ZoneInfo
 
 from mqtt_kafka_connector.connector.handlers import (
     FStateHandler,
@@ -12,8 +11,14 @@ from mqtt_kafka_connector.connector.handlers import (
     TopicRouter,
 )
 from mqtt_kafka_connector.context_vars import customer_id_var, device_id_var
-from mqtt_kafka_connector.middlewares import Pipeline
-from tests.conftest import DEVICE_ID, SCHEMA_ID, CUSTOMER_ID, MQTT_TOPIC, MQTT_FSTATE_TOPIC, create_mqtt_message
+from tests.conftest import (
+    CUSTOMER_ID,
+    DEVICE_ID,
+    MQTT_FSTATE_TOPIC,
+    MQTT_TOPIC,
+    SCHEMA_ID,
+    create_mqtt_message,
+)
 
 TZ = ZoneInfo("UTC")
 

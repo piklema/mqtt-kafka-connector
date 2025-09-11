@@ -1,7 +1,6 @@
 from unittest import mock
 
 import pytest
-from aiomqtt.message import Message
 
 from mqtt_kafka_connector.connector.connector import Connector
 from tests.conftest import create_mqtt_message

@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock
 
 from dependency_injector import containers, providers
 
-from mqtt_kafka_connector.settings import settings
 from mqtt_kafka_connector.clients.kafka import KafkaProducer, MessageHelper
 from mqtt_kafka_connector.clients.mqtt import MQTTClient
 from mqtt_kafka_connector.clients.schema_client import SchemaClient
@@ -23,6 +22,7 @@ from mqtt_kafka_connector.middlewares import (
     Pipeline,
 )
 from mqtt_kafka_connector.services.prometheus import Prometheus
+from mqtt_kafka_connector.settings import settings
 
 
 class Container(containers.DeclarativeContainer):

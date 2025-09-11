@@ -7,8 +7,10 @@ import aiomqtt
 from aiokafka.errors import KafkaConnectionError
 from aiomqtt.message import Message
 
-from mqtt_kafka_connector.settings import settings
 from mqtt_kafka_connector.connector.handlers import TopicRouter
+from mqtt_kafka_connector.settings import settings
+from mqtt_kafka_connector.clients.kafka import KafkaProducer
+from mqtt_kafka_connector.services.prometheus import Prometheus
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +23,9 @@ class Connector:
     def __init__(
         self,
         mqtt_client: aiomqtt.Client,
-        kafka_producer: "KafkaProducer",
+        kafka_producer: KafkaProducer,
         topic_router: TopicRouter,
-        prometheus: "Prometheus" | None = None,
+        prometheus: Prometheus | None = None,
     ):
         """
         Инициализация коннектора.
