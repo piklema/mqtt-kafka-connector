@@ -77,7 +77,7 @@ async def kafka_consumer_factory():
         await consumer.stop()
 
 
-async def _consume_and_check(consumer: AIOKafkaConsumer, expected_speed: float):
+async def consume_and_check(consumer: AIOKafkaConsumer, expected_speed: float):
     while True:
         msg = await asyncio.wait_for(consumer.getone(), timeout=5)
         assert msg is not None
@@ -115,7 +115,7 @@ async def test_e2e_avro(schema, mqtt_client, kafka_consumer_factory):
         payload=payload,
     )
 
-    data = await _consume_and_check(consumer, expected_speed)
+    data = await consume_and_check(consumer, expected_speed)
     assert data["speed"] == expected_speed
     assert data["lat"] == 55.75
 
@@ -145,7 +145,7 @@ async def test_e2e_json(mqtt_client, kafka_consumer_factory):
         payload=payload,
     )
 
-    data = await _consume_and_check(consumer, expected_speed)
+    data = await consume_and_check(consumer, expected_speed)
     assert data["speed"] == expected_speed
 
 
@@ -179,5 +179,5 @@ async def test_e2e_gzipped_avro(schema, mqtt_client, kafka_consumer_factory):
         payload=gzipped_payload,
     )
 
-    data = await _consume_and_check(consumer, expected_speed)
+    data = await consume_and_check(consumer, expected_speed)
     assert data["speed"] == expected_speed

@@ -6,12 +6,12 @@ from collections import defaultdict
 import orjson
 from aiomqtt.message import Message
 
+from mqtt_kafka_connector.clients.kafka import KafkaProducer
 from mqtt_kafka_connector.context_vars import message_uuid_var, setup_context_vars
 from mqtt_kafka_connector.middlewares import Pipeline
+from mqtt_kafka_connector.services.prometheus import Prometheus
 from mqtt_kafka_connector.settings import settings
 from mqtt_kafka_connector.utils import Template
-from mqtt_kafka_connector.clients.kafka import KafkaProducer
-from mqtt_kafka_connector.services.prometheus import Prometheus
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ class TelemetryHandler(MessageHandler):
     def __init__(
         self,
         kafka_producer: KafkaProducer,
-        pipeline: "Pipeline",
+        pipeline: Pipeline,
         prometheus: Prometheus | None = None,
     ):
         super().__init__(kafka_producer)

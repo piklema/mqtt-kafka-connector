@@ -62,3 +62,4 @@ asyncio_default_fixture_loop_scope = "function"
 markers = [
     "e2e: отмечает тесты как e2e (end-to-end)",
 ]
+addopts = "-m \"not e2e\""
