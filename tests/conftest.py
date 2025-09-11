@@ -1,9 +1,9 @@
 import asyncio
 import dataclasses
 import datetime
+import orjson
 from unittest.mock import AsyncMock, MagicMock
 
-import orjson
 import pytest
 from aiomqtt.message import Message
 from aioprometheus import REGISTRY

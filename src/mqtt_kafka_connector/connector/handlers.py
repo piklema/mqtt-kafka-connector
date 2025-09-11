@@ -120,16 +120,16 @@ class TelemetryHandler(MessageHandler):
         telemetry_msg_pack = await self.get_telemetry_message_pack(
             mqtt_message, schema_id
         )
-        if self.check_telemetry_messages_pack(mqtt_message.topic.value, telemetry_msg_pack):
+        if self.check_telemetry_messages_pack(
+            mqtt_message.topic.value, telemetry_msg_pack
+        ):
             await self.kafka_handler(
                 telemetry_msg_pack,
                 kafka_topic,
                 kafka_key,
                 kafka_headers,
             )
-            await self.prometheus.messages_counter_add(
-                value=len(telemetry_msg_pack)
-            )
+            self.prometheus.messages_counter_add(value=len(telemetry_msg_pack))
 
         return True
 
@@ -153,8 +153,12 @@ class TelemetryHandler(MessageHandler):
         try:
             parsed_schema = fastavro.parse_schema(schema)
             data = fastavro.schemaless_reader(fp, parsed_schema)
-        except (IndexError, StopIteration, EOFError):
-            raise RuntimeError("Сообщение не валидно")
+        except (IndexError, StopIteration, EOFError) as e:
+            error_message = (
+                f"Сообщение не валидно: ошибка десериализации Avro: {e}"
+            )
+            logger.error(error_message, exc_info=True)
+            raise RuntimeError(error_message) from e
 
         logger.debug("Сообщение десериализовано: data=%s", data)
 

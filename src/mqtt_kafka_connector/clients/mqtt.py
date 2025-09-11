@@ -22,7 +22,7 @@ class MQTTClient:
             username=settings.MQTT_USER,
             password=settings.MQTT_PASSWORD,
             identifier=settings.MQTT_CLIENT_ID,
-            clean_session=False,
+            clean_session=True,
             timeout=300,
         )
         # настраиваем ручное подтверждение

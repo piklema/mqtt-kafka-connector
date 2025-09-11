@@ -19,7 +19,11 @@ class MessageParamsFilter(Filter):
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     LOGLEVEL: str = "INFO"
     MQTT_HOST: str
@@ -56,6 +60,7 @@ class Settings(BaseSettings):
     MIN_TELEMETRY_INTERVAL_AGE_HOURS: int = 24 * 3
     MAX_TELEMETRY_INTERVAL_AGE_HOURS: int = 1
     RELEASE_VERSION: str = ""
+    E2E_TESTING: str = "false"
 
 
 settings = Settings()

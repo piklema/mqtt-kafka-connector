@@ -2,6 +2,7 @@
 
 В этом файле определяется DI-контейнер для управления зависимостями приложения.
 """
+from unittest.mock import AsyncMock
 
 from dependency_injector import containers, providers
 
@@ -40,7 +41,44 @@ class Container(containers.DeclarativeContainer):
 
     mqtt_client = providers.Singleton(MQTTClient)
 
-    schema_client = providers.Singleton(SchemaClient)
+    schema_client = providers.Selector(
+        config.E2E_TESTING,
+        true=providers.Factory(
+            lambda: AsyncMock(
+                get_schema=AsyncMock(
+                    return_value={
+                        "name": "MessagePack",
+                        "type": "record",
+                        "fields": [
+                            {
+                                "name": "messages",
+                                "type": {
+                                    "type": "array",
+                                    "items": {
+                                        "name": "MessageModel",
+                                        "type": "record",
+                                        "fields": [
+                                            {
+                                                "name": "time",
+                                                "type": {
+                                                    "type": "long",
+                                                    "logicalType": "timestamp-millis",
+                                                },
+                                            },
+                                            {"name": "speed", "type": "double"},
+                                            {"name": "lat", "type": "double"},
+                                            {"name": "lon", "type": "double"},
+                                        ],
+                                    },
+                                },
+                            }
+                        ],
+                    }
+                )
+            )
+        ),
+        false=providers.Singleton(SchemaClient),
+    )
 
     fstate_handler = providers.Singleton(
         FStateHandler,

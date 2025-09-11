@@ -110,7 +110,7 @@ class KafkaProducer:
         fut = await self.producer.send_batch(batch, topic, partition=partition)
         await fut
         logger.info(
-            "Отправлено %s сообщений в батче",
+            "Отправлено %r сообщений в батче",
             batch.record_count(),
         )
 
