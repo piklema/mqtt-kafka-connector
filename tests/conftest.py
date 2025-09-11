@@ -11,6 +11,25 @@ from dataclasses_avroschema import AvroModel
 
 from mqtt_kafka_connector.clients.kafka import KafkaProducer, MessageHelper
 from mqtt_kafka_connector.services.prometheus import Prometheus
+from mqtt_kafka_connector.clients.schema_client import SchemaClient
+from mqtt_kafka_connector.middlewares import Pipeline
+
+
+DEVICE_ID = "22222"
+SCHEMA_ID = "333333"
+CUSTOMER_ID = "11111"
+MQTT_TOPIC = f"customer/{CUSTOMER_ID}/dev/{DEVICE_ID}/v{SCHEMA_ID}"
+MQTT_FSTATE_TOPIC = f"fstate/{CUSTOMER_ID}/truck/{DEVICE_ID}"
+
+def _get_message(topic: str, payload: bytes = b"test_payload") -> Message:
+    return Message(
+        topic=topic,
+        payload=payload,
+        qos=1,
+        retain=False,
+        mid=1,
+        properties=None,
+    )
 
 
 @pytest.fixture()
@@ -156,3 +175,15 @@ def mock_mqtt_settings(monkeypatch):
 
     monkeypatch.setattr("mqtt_kafka_connector.clients.mqtt.settings", mock_settings)
     return mock_settings
+
+
+@pytest.fixture
+def schema_client() -> SchemaClient:
+    return MagicMock(spec=SchemaClient)
+
+
+@pytest.fixture
+def pipeline():
+    mock_pipeline = AsyncMock(spec=Pipeline)
+    mock_pipeline.run.return_value = {}
+    return mock_pipeline

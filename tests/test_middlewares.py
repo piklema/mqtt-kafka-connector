@@ -14,11 +14,6 @@ from mqtt_kafka_connector.middlewares import (
 )
 
 
-@pytest.fixture
-def schema_client() -> SchemaClient:
-    return mock.AsyncMock(spec=SchemaClient)
-
-
 @pytest.mark.asyncio
 class TestGzipMiddleware:
     async def test_process_gzipped(self):

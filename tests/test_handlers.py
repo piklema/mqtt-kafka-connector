@@ -13,13 +13,9 @@ from mqtt_kafka_connector.connector.handlers import (
 )
 from mqtt_kafka_connector.context_vars import customer_id_var, device_id_var
 from mqtt_kafka_connector.middlewares import Pipeline
+from tests.conftest import DEVICE_ID, SCHEMA_ID, CUSTOMER_ID, MQTT_TOPIC, MQTT_FSTATE_TOPIC, _get_message
 
 TZ = ZoneInfo("UTC")
-DEVICE_ID = "22222"
-SCHEMA_ID = "333333"
-CUSTOMER_ID = "11111"
-MQTT_TOPIC = f"customer/{CUSTOMER_ID}/dev/{DEVICE_ID}/v{SCHEMA_ID}"
-MQTT_FSTATE_TOPIC = f"fstate/{CUSTOMER_ID}/truck/{DEVICE_ID}"
 
 
 @pytest.fixture
@@ -33,17 +29,8 @@ def fstate_handler_mock():
 
 
 @pytest.fixture
-def kafka_producer():
-    return mock.AsyncMock()
-
-
-@pytest.fixture
-def pipeline():
-    return mock.AsyncMock(spec=Pipeline)
-
-
-@pytest.fixture
 def fstate_handler(kafka_producer):
+    kafka_producer.send = mock.AsyncMock()
     return FStateHandler(kafka_producer)
 
 
@@ -57,17 +44,6 @@ def topic_router(telemetry_handler_mock, fstate_handler_mock):
     return TopicRouter(
         telemetry_handler=telemetry_handler_mock,
         fstate_handler=fstate_handler_mock,
-    )
-
-
-def _get_message(topic: str, payload: bytes = b"test_payload") -> Message:
-    return Message(
-        topic=topic,
-        payload=payload,
-        qos=1,
-        retain=False,
-        mid=1,
-        properties=None,
     )
 
 
@@ -120,8 +96,8 @@ async def test_telemetry_handler(telemetry_handler, pipeline, message_pack):
 
     pipeline.run.assert_called_once_with(payload_bytes, schema_id=int(SCHEMA_ID))
 
-    telemetry_handler.kafka_producer.send_batch.assert_called_once()
-    call_args, _ = telemetry_handler.kafka_producer.send_batch.call_args
+    telemetry_handler.kafka_producer.producer.send_batch.assert_called_once()
+    call_args, _ = telemetry_handler.kafka_producer.producer.send_batch.call_args
     assert call_args[1] == deserialized_data["messages"]
 
 
