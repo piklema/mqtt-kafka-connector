@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 import logging
+import time
 from collections import defaultdict
 
 import orjson
@@ -187,6 +186,13 @@ class TelemetryHandler(MessageHandler):
         logger.info("Получено %s сообщений из %s", messages_count, mqtt_topic)
         return True
 
+    def _report_latency(self, messages: list):
+        current_time_ms = int(time.time() * 1000)
+        for msg in messages:
+            if "timestamp" in msg:
+                latency_seconds = (current_time_ms - msg["timestamp"]) / 1000.0
+                self.prometheus.telemetry_message_lag_add(value=latency_seconds)
+
     async def kafka_handler(
         self,
         messages: list,
@@ -214,6 +220,7 @@ class TelemetryHandler(MessageHandler):
                 kafka_key,
                 kafka_headers,
             )
+            self._report_latency(messages)
 
         else:
             for msg in messages:
@@ -223,6 +230,7 @@ class TelemetryHandler(MessageHandler):
                     key=kafka_key,
                     headers=kafka_headers,
                 )
+            self._report_latency(messages)
 
         return True
 

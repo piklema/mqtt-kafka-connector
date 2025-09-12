@@ -55,7 +55,9 @@ def topic_router(telemetry_handler_mock, fstate_handler_mock):
 async def test_topic_router_telemetry(
     topic_router, telemetry_handler_mock, fstate_handler_mock
 ):
-    message = create_mqtt_message(f"customer/{CUSTOMER_ID}/dev/{DEVICE_ID}/v{SCHEMA_ID}")
+    message = create_mqtt_message(
+        f"customer/{CUSTOMER_ID}/dev/{DEVICE_ID}/v{SCHEMA_ID}"
+    )
     await topic_router.handle(message)
 
     telemetry_handler_mock.handle.assert_called_once_with(message)
