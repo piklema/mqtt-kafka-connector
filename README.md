@@ -131,12 +131,6 @@ uv run mkc
 
 ### 2. Запуск нагрузочного теста Locust
 
-Перейдите в директорию `tests/load_test`:
-
-```bash
-cd tests/load_test
-```
-
 Запустите Locust:
 
 ```bash
