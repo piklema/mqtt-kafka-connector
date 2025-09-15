@@ -46,38 +46,37 @@ class Connector:
         Основной цикл работы коннектора.
         """
         logger.info("Запуск коннектора...")
-        while True:
-            try:
-                if self.prometheus:
-                    await self.prometheus.start()
-                await self.mqtt_client.start()
-                await self.kafka_producer.start()
+        try:
+            if self.prometheus:
+                await self.prometheus.start()
+            await self.kafka_producer.start()
 
-                async for mqtt_message in self.mqtt_client.get_messages():
-                    try:
-                        await self.handle(mqtt_message)
-                    except RuntimeError as err:
-                        logger.error("Ошибка выполнения: %s", err)
+            while True:
+                try:
+                    await self.mqtt_client.start()
 
-            except aiomqtt.MqttError as err:
-                logger.warning(
-                    "Ошибка подключения к MQTT %r. Повторное подключение через %r секунд (%r).",
-                    err,
-                    settings.RECONNECT_INTERVAL_SEC,
-                    str(self.mqtt_client),
-                )
-                await asyncio.sleep(settings.RECONNECT_INTERVAL_SEC)
-            except KafkaConnectionError as err:
-                logger.warning(
-                    "Ошибка подключения к Kafka %s. Повторное подключение через %r секунд.",
-                    err,
-                    settings.RECONNECT_INTERVAL_SEC,
-                )
-                await asyncio.sleep(settings.RECONNECT_INTERVAL_SEC)
-            finally:
-                await self.kafka_producer.stop()
-                if self.prometheus:
-                    await self.prometheus.service.stop()
+                    async for mqtt_message in self.mqtt_client.get_messages():
+                        try:
+                            await self.handle(mqtt_message)
+                        except RuntimeError as err:
+                            logger.error("Ошибка выполнения: %s", err)
+
+                except (aiomqtt.MqttError, KafkaConnectionError) as err:
+                    logger.warning(
+                        "Ошибка подключения: %r. Повторное подключение через %r секунд.",
+                        err,
+                        settings.RECONNECT_INTERVAL_SEC,
+                    )
+                    await asyncio.sleep(settings.RECONNECT_INTERVAL_SEC)
+
+        except asyncio.CancelledError:
+            logger.info("Получен сигнал на завершение работы.")
+
+        finally:
+            logger.info("Остановка сервисов...")
+            await self.kafka_producer.stop()
+            if self.prometheus:
+                await self.prometheus.service.stop()
 
     async def handle(self, mqtt_message: Message) -> bool:
         """
