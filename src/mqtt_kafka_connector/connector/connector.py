@@ -7,10 +7,10 @@ import aiomqtt
 from aiokafka.errors import KafkaConnectionError
 from aiomqtt.message import Message
 
-from mqtt_kafka_connector.connector.handlers import TopicRouter
-from mqtt_kafka_connector.settings import settings
 from mqtt_kafka_connector.clients.kafka import KafkaProducer
+from mqtt_kafka_connector.connector.handlers import TopicRouter
 from mqtt_kafka_connector.services.prometheus import Prometheus
+from mqtt_kafka_connector.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -61,14 +61,15 @@ class Connector:
 
             except aiomqtt.MqttError as err:
                 logger.warning(
-                    "Ошибка подключения к MQTT %s. Повторное подключение через %s секунд.",
+                    "Ошибка подключения к MQTT %r. Повторное подключение через %r секунд (%r).",
                     err,
                     settings.RECONNECT_INTERVAL_SEC,
+                    str(self.mqtt_client),
                 )
                 await asyncio.sleep(settings.RECONNECT_INTERVAL_SEC)
             except KafkaConnectionError as err:
                 logger.warning(
-                    "Ошибка подключения к Kafka %s. Повторное подключение через %s секунд.",
+                    "Ошибка подключения к Kafka %s. Повторное подключение через %r секунд.",
                     err,
                     settings.RECONNECT_INTERVAL_SEC,
                 )

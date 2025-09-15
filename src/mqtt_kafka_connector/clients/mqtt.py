@@ -46,3 +46,6 @@ class MQTTClient:
                     mqtt_message.mid,
                     mqtt_message.qos,
                 )
+
+    def __str__(self):
+        return f"MQTTClient(host={settings.MQTT_HOST}, port={settings.MQTT_PORT}, topic={settings.MQTT_TOPIC_SOURCE_MATCH})"

@@ -48,7 +48,7 @@ mkc
 -   **Сборка образа Docker:**
 
     ```shell
-    docker build --no-cache -t piklema/mqtt-kafka-connector:latest .
+    docker build --no-cache -t piklema/mkc:latest .
     ```
 
 -   **Запуск с Docker Compose:**
@@ -96,6 +96,19 @@ E2E_TESTING=true uv run mkc
 uv run pytest tests/test_e2e.py
 ```
 
+### Запуск с мониторингом
+
+Для запуска E2E-тестов вместе с сервисами мониторинга (Prometheus и Grafana) используйте профиль `monitoring`:
+
+```bash
+docker-compose -f docker-compose.e2e.yml --profile monitoring up -d
+```
+
+После запуска вы сможете получить доступ к:
+
+-   Prometheus: `http://localhost:9090`
+-   Grafana: `http://localhost:3000` (логин/пароль по умолчанию: `admin`/`admin`)
+
 ## Нагрузочное тестирование
 
 Для проведения нагрузочного тестирования используйте Locust и эмулятор грузовиков.
@@ -127,7 +140,7 @@ cd tests/load_test
 Запустите Locust:
 
 ```bash
-uv run locust -f locustfile.py
+uv run locust -f tests/load_test/locustfile.py
 ```
 
 Откройте веб-интерфейс Locust в браузере (обычно по адресу `http://localhost:8089`). В интерфейсе Locust вы сможете настроить количество пользователей (N) и скорость их появления. Постепенно увеличивайте N, чтобы наблюдать за поведением системы.

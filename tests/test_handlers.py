@@ -86,6 +86,9 @@ async def test_topic_router_unknown(
 
 
 async def test_telemetry_handler(telemetry_handler, pipeline, message_pack):
+    # Мокаем метод верхнего уровня для этого теста
+    telemetry_handler.kafka_producer.send_batch = mock.AsyncMock()
+
     payload_bytes = message_pack.serialize()
     message = create_mqtt_message(
         topic=MQTT_TOPIC,
@@ -103,9 +106,13 @@ async def test_telemetry_handler(telemetry_handler, pipeline, message_pack):
 
     pipeline.run.assert_called_once_with(payload_bytes, schema_id=int(SCHEMA_ID))
 
-    telemetry_handler.kafka_producer.producer.send_batch.assert_called_once()
-    call_args, _ = telemetry_handler.kafka_producer.producer.send_batch.call_args
-    assert call_args[1] == deserialized_data["messages"]
+    # Теперь проверяем вызов созданного мока
+    telemetry_handler.kafka_producer.send_batch.assert_called_once()
+
+    # Проверяем позиционные аргументы, переданные в наш мок
+    call_args = telemetry_handler.kafka_producer.send_batch.call_args
+    assert call_args.args[0] == "telemetry"
+    assert call_args.args[1] == deserialized_data["messages"]
 
 
 async def test_fstate_handler(fstate_handler):

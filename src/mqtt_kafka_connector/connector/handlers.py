@@ -214,7 +214,7 @@ class TelemetryHandler(MessageHandler):
         )
 
         if settings.KAFKA_SEND_BATCHES:
-            await self.kafka_producer.producer.send_batch(
+            await self.kafka_producer.send_batch(
                 kafka_topic,
                 messages,
                 kafka_key,
@@ -231,8 +231,6 @@ class TelemetryHandler(MessageHandler):
                     headers=kafka_headers,
                 )
             self._report_latency(messages)
-
-        return True
 
 
 class FStateHandler(MessageHandler):

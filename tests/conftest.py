@@ -117,11 +117,7 @@ def kafka_producer(prometheus):
     mock_producer.start = AsyncMock()
     mock_producer.stop = AsyncMock()
     mock_producer.create_batch = MagicMock()
-    mock_producer.create_batch.return_value.append.side_effect = [
-        None,
-        "1",
-        "metadata",
-    ]
+    
     mock_producer.partitions_for = AsyncMock(return_value=[0])
 
     res = MagicMock()

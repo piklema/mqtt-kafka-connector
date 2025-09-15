@@ -46,6 +46,17 @@ def schema():
 
 
 @pytest.fixture
+def mock_schema_registry(mocker, schema):
+    """Мок для запроса схемы."""
+    mock = mocker.patch(
+        "mqtt_kafka_connector.clients.schema_client.SchemaClient.get_schema",
+        new_callable=mocker.AsyncMock,
+    )
+    mock.return_value = schema
+    return mock
+
+
+@pytest.fixture
 async def mqtt_client():
     async with MqttClient(
         hostname=settings.MQTT_HOST,
@@ -88,7 +99,12 @@ async def consume_and_check(consumer: AIOKafkaConsumer, expected_speed: float):
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_e2e_avro(schema, mqtt_client, kafka_consumer_factory):
+async def test_e2e_avro(
+    schema,
+    mqtt_client,
+    kafka_consumer_factory,
+    mock_schema_registry,
+):
     """Тест сквозной отправки бинарного сообщения Avro."""
     consumer = await kafka_consumer_factory("test-group-avro")
     expected_speed = 10.0
@@ -122,7 +138,7 @@ async def test_e2e_avro(schema, mqtt_client, kafka_consumer_factory):
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_e2e_json(mqtt_client, kafka_consumer_factory):
+async def test_e2e_json(mqtt_client, kafka_consumer_factory, mock_schema_registry):
     """Тест сквозной отправки сообщения в формате JSON."""
     consumer = await kafka_consumer_factory("test-group-json")
     expected_speed = 20.0
@@ -151,7 +167,12 @@ async def test_e2e_json(mqtt_client, kafka_consumer_factory):
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_e2e_gzipped_avro(schema, mqtt_client, kafka_consumer_factory):
+async def test_e2e_gzipped_avro(
+    schema,
+    mqtt_client,
+    kafka_consumer_factory,
+    mock_schema_registry,
+):
     """Тест сквозной отправки Gzipped Avro сообщения."""
     consumer = await kafka_consumer_factory("test-group-gzip")
     expected_speed = 30.0
