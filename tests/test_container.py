@@ -1,23 +1,17 @@
-from unittest.mock import patch
+from mqtt_kafka_connector.container import Container
+from mqtt_kafka_connector.connector.handlers import FStateHandler, TelemetryHandler
 
-from mqtt_kafka_connector.connector.main import main
 
-
-@patch("mqtt_kafka_connector.connector.main.Container")
-@patch("asyncio.run")
-def test_main(mock_asyncio_run, mock_container):
+def test_container_wiring():
     """
-    Тест проверяет, что:
-    - Создается DI-контейнер.
-    - Из контейнера получается коннектор.
-    - Запускается `asyncio.run` с методом `run` коннектора.
+    Тест проверяет, что DI-контейнер создается и правильно связывает зависимости.
     """
-    # Действие
-    main()
+    container = Container()
 
-    # Проверки
-    mock_container.assert_called_once()
-    mock_container.return_value.connector.assert_called_once()
-    mock_asyncio_run.assert_called_once_with(
-        mock_container.return_value.connector.return_value.run.return_value
-    )
+    fstate_handler = container.fstate_handler()
+    telemetry_handler = container.telemetry_handler()
+
+    assert isinstance(fstate_handler, FStateHandler)
+    assert isinstance(telemetry_handler, TelemetryHandler)
+    assert fstate_handler.pipeline is telemetry_handler.pipeline
+    assert fstate_handler.kafka_producer is telemetry_handler.kafka_producer

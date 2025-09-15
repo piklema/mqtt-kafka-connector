@@ -202,3 +202,43 @@ async def test_e2e_gzipped_avro(
 
     data = await consume_and_check(consumer, expected_speed)
     assert data["speed"] == expected_speed
+
+
+@pytest.fixture
+async def fstate_kafka_consumer():
+    consumer = AIOKafkaConsumer(
+        settings.FSTATE_KAFKA_TOPIC,
+        bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
+        group_id="test-group-fstate-gzip-json",
+        auto_offset_reset="earliest",
+    )
+    await consumer.start()
+    yield consumer
+    await consumer.stop()
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_e2e_gzipped_json_fstate(
+    mqtt_client,
+    fstate_kafka_consumer,
+    mock_schema_registry,
+):
+    """Тест сквозной отправки Gzipped JSON сообщения для fstate."""
+    consumer = fstate_kafka_consumer
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    payload_dict = {"time": now_iso, "custom_field": "custom_value"}
+    payload = orjson.dumps(payload_dict)
+    gzipped_payload = gzip.compress(payload)
+
+    await mqtt_client.publish(
+        f"fstate/{CUSTOMER_ID}/truck/{DEVICE_ID}",
+        payload=gzipped_payload,
+    )
+
+    msg = await asyncio.wait_for(consumer.getone(), timeout=5)
+    assert msg is not None
+    data = orjson.loads(msg.value)
+
+    assert data["time"] == now_iso
+    assert data["custom_field"] == "custom_value"

@@ -24,8 +24,9 @@ class BaseHandler:
 
 
 class MessageHandler(BaseHandler):
-    def __init__(self, kafka_producer: KafkaProducer):
+    def __init__(self, kafka_producer: KafkaProducer, pipeline: Pipeline):
         self.kafka_producer = kafka_producer
+        self.pipeline = pipeline
 
     def _setup_vars(self, message: Message, template: str) -> dict | None:
         mqtt_params = Template(template).to_dict(message.topic.value)
@@ -82,8 +83,7 @@ class TelemetryHandler(MessageHandler):
         pipeline: Pipeline,
         prometheus: Prometheus | None = None,
     ):
-        super().__init__(kafka_producer)
-        self.pipeline = pipeline
+        super().__init__(kafka_producer, pipeline)
         self.prometheus = prometheus
         self.last_messages = defaultdict(dict)
 
@@ -270,25 +270,25 @@ class FStateHandler(MessageHandler):
                 mqtt_params,
                 settings.FSTATE_KAFKA_TOPIC,
             )
-            message = orjson.loads(
-                mqtt_message.payload.decode()
-                if isinstance(mqtt_message.payload, bytes)
-                else str(mqtt_message.payload)
-            )
-        except orjson.JSONDecodeError as err:
-            logger.error(
-                "Ошибка декодирования JSON из топика %r. Payload: %r. Ошибка: %s",
-                mqtt_message.topic.value,
-                mqtt_message.payload[:200],
-                err,
-            )
-            return False
         except KeyError as err:
             logger.error(
                 "Ключ не найден в параметрах топика MQTT %r. Параметры: %r. Ошибка: %s",
                 mqtt_message.topic.value,
                 mqtt_params,
                 err,
+            )
+            return False
+
+        schema_id = int(dict(kafka_headers).get("schema_id", 0))
+        message = await self.pipeline.run(
+            mqtt_message.payload, schema_id=schema_id
+        )
+
+        if isinstance(message, bytes):
+            logger.error(
+                "Ошибка декодирования сообщения из топика %r. Payload: %r.",
+                mqtt_message.topic.value,
+                message[:200],
             )
             return False
 

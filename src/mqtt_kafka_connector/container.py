@@ -94,7 +94,7 @@ class Container(containers.DeclarativeContainer):
     )
     json_middleware = providers.Singleton(JsonMiddleware)
 
-    telemetry_pipeline = providers.Singleton(
+    message_pipeline = providers.Singleton(
         Pipeline,
         middlewares=providers.List(
             gzip_middleware,
@@ -106,12 +106,13 @@ class Container(containers.DeclarativeContainer):
     fstate_handler = providers.Singleton(
         FStateHandler,
         kafka_producer=kafka_producer,
+        pipeline=message_pipeline,
     )
 
     telemetry_handler = providers.Singleton(
         TelemetryHandler,
         kafka_producer=kafka_producer,
-        pipeline=telemetry_pipeline,
+        pipeline=message_pipeline,
         prometheus=prometheus,
     )
 

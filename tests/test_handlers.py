@@ -34,9 +34,9 @@ def fstate_handler_mock():
 
 
 @pytest.fixture
-def fstate_handler(kafka_producer):
+def fstate_handler(kafka_producer, pipeline):
     kafka_producer.send = mock.AsyncMock()
-    return FStateHandler(kafka_producer)
+    return FStateHandler(kafka_producer, pipeline)
 
 
 @pytest.fixture
@@ -115,33 +115,42 @@ async def test_telemetry_handler(telemetry_handler, pipeline, message_pack):
     assert call_args.args[1] == deserialized_data["messages"]
 
 
-async def test_fstate_handler(fstate_handler):
+async def test_fstate_handler(fstate_handler, pipeline):
     now = dt.datetime.now().isoformat()
-    payload = f'{{"time": "{now}"}}'.encode()
+    payload_dict = {"time": now}
+    payload_bytes = orjson.dumps(payload_dict)
     message = create_mqtt_message(
         topic=MQTT_FSTATE_TOPIC,
-        payload=payload,
+        payload=payload_bytes,
     )
+
+    pipeline.run.return_value = payload_dict
+
     res = await fstate_handler.handle(message)
     assert res is True
     assert customer_id_var.get() == CUSTOMER_ID
     assert device_id_var.get() == DEVICE_ID
 
+    pipeline.run.assert_called_once_with(payload_bytes, schema_id=0)
+
     assert fstate_handler.kafka_producer.send.call_count == 1
     send_call_args = fstate_handler.kafka_producer.send.call_args
     assert send_call_args.args[0] == "fstate"
-    assert send_call_args.kwargs["message"] == orjson.loads(payload)
+    assert send_call_args.kwargs["message"] == payload_dict
 
 
-async def test_fstate_handler_not_valid_json(fstate_handler, caplog):
+async def test_fstate_handler_not_valid_json(fstate_handler, pipeline, caplog):
     payload = b"not valid json"
     message = create_mqtt_message(
         topic=MQTT_FSTATE_TOPIC,
         payload=payload,
     )
+
+    pipeline.run.return_value = payload
+
     res = await fstate_handler.handle(message)
     assert res is False
-    assert "Ошибка декодирования JSON" in caplog.text
+    assert "Ошибка декодирования сообщения" in caplog.text
 
 
 async def test_fstate_handler_with_bad_topic(fstate_handler, caplog):
